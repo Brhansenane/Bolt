@@ -50,7 +50,7 @@ export function HistoryItem({ item, onDelete, onDuplicate, exportChat }: History
         </form>
       ) : (
         <a href={`/chat/${item.urlId}`} className="flex w-full relative truncate block">
-          <WithTooltip tooltip={currentDescription}>
+          <WithTooltip content={currentDescription}>
             <span className="truncate pr-24">{currentDescription}</span>
           </WithTooltip>
           <div
@@ -119,7 +119,7 @@ const ChatActionButton = forwardRef(
     ref: ForwardedRef<HTMLButtonElement>,
   ) => {
     return (
-      <WithTooltip tooltip={toolTipContent} position="bottom" sideOffset={4}>
+      <WithTooltip content={toolTipContent} position="bottom" sideOffset={4}>
         <button
           ref={ref}
           type="button"

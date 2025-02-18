@@ -18,11 +18,28 @@ const initialProfile: Profile = storedProfile
 
 export const profileStore = atom<Profile>(initialProfile);
 
-export const updateProfile = (updates: Partial<Profile>) => {
-  profileStore.set({ ...profileStore.get(), ...updates });
+let saveTimeout: NodeJS.Timeout | null = null;
 
-  // Persist to localStorage
+const saveToLocalStorage = (profile: Profile) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('bolt_profile', JSON.stringify(profileStore.get()));
+    localStorage.setItem('bolt_profile', JSON.stringify(profile));
   }
+};
+
+const debouncedSave = (profile: Profile) => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  saveTimeout = setTimeout(() => {
+    saveToLocalStorage(profile);
+  }, 500);
+};
+
+export const updateProfile = (updates: Partial<Profile>) => {
+  const newProfile = { ...profileStore.get(), ...updates };
+  profileStore.set(newProfile);
+
+  // Debounce localStorage updates
+  debouncedSave(newProfile);
 };

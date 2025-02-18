@@ -706,7 +706,12 @@ const ServiceStatusTab = () => {
               <TbActivityHeartbeat className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-md font-medium text-bolt-elements-textPrimary">Service Status</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-md font-medium text-bolt-elements-textPrimary">Service Status</h4>
+                <span className="px-2 py-0.5 text-xs rounded-md bg-purple-500/10 text-purple-500 font-medium">
+                  BETA
+                </span>
+              </div>
               <p className="text-sm text-bolt-elements-textSecondary">
                 Monitor and test the operational status of cloud LLM providers
               </p>

@@ -294,7 +294,10 @@ const UpdateTab = () => {
       >
         <div className="i-ph:arrow-circle-up text-xl text-purple-500" />
         <div>
-          <h3 className="text-lg font-medium text-bolt-elements-textPrimary">Updates</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium text-bolt-elements-textPrimary">Updates</h3>
+            <span className="px-2 py-0.5 text-xs rounded-md bg-purple-500/10 text-purple-500 font-medium">BETA</span>
+          </div>
           <p className="text-sm text-bolt-elements-textSecondary">Check for and manage application updates</p>
         </div>
       </motion.div>

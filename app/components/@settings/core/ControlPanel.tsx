@@ -38,6 +38,7 @@ import CloudProvidersTab from '~/components/@settings/tabs/providers/cloud/Cloud
 import ServiceStatusTab from '~/components/@settings/tabs/providers/status/ServiceStatusTab';
 import LocalProvidersTab from '~/components/@settings/tabs/providers/local/LocalProvidersTab';
 import TaskManagerTab from '~/components/@settings/tabs/task-manager/TaskManagerTab';
+import SyncTab from '~/components/@settings/tabs/sync/SyncTab';
 
 interface ControlPanelProps {
   open: boolean;
@@ -81,10 +82,11 @@ const TAB_DESCRIPTIONS: Record<TabType, string> = {
   update: 'Check for updates and release notes',
   'task-manager': 'Monitor system resources and processes',
   'tab-management': 'Configure visible tabs and their order',
+  sync: 'Sync your data and settings',
 };
 
 // Beta status for experimental features
-const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers']);
+const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers', 'sync']);
 
 const BetaLabel = () => (
   <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20">
@@ -263,6 +265,27 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
     },
   };
 
+  // Reset to default view when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      // Reset when closing
+      setActiveTab(null);
+      setLoadingTab(null);
+      setShowTabManagement(false);
+    } else {
+      // When opening, set to null to show the main view
+      setActiveTab(null);
+    }
+  }, [open]);
+
+  // Handle closing
+  const handleClose = () => {
+    setActiveTab(null);
+    setLoadingTab(null);
+    setShowTabManagement(false);
+    onClose();
+  };
+
   // Handlers
   const handleBack = () => {
     if (showTabManagement) {
@@ -283,10 +306,6 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
   }, [developerMode]);
 
   const getTabComponent = (tabId: TabType | 'tab-management') => {
-    if (tabId === 'tab-management') {
-      return <TabManagement />;
-    }
-
     switch (tabId) {
       case 'profile':
         return <ProfileTab />;
@@ -302,6 +321,8 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
         return <CloudProvidersTab />;
       case 'local-providers':
         return <LocalProvidersTab />;
+      case 'service-status':
+        return <ServiceStatusTab />;
       case 'connection':
         return <ConnectionsTab />;
       case 'debug':
@@ -312,8 +333,10 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
         return <UpdateTab />;
       case 'task-manager':
         return <TaskManagerTab />;
-      case 'service-status':
-        return <ServiceStatusTab />;
+      case 'tab-management':
+        return <TabManagement />;
+      case 'sync':
+        return <SyncTab />;
       default:
         return null;
     }
@@ -405,8 +428,8 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
 
           <RadixDialog.Content
             aria-describedby={undefined}
-            onEscapeKeyDown={onClose}
-            onPointerDownOutside={onClose}
+            onEscapeKeyDown={handleClose}
+            onPointerDownOutside={handleClose}
             className="relative z-[101]"
           >
             <motion.div
@@ -461,7 +484,7 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
 
                     {/* Close Button */}
                     <button
-                      onClick={onClose}
+                      onClick={handleClose}
                       className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-purple-500/10 dark:hover:bg-purple-500/20 group transition-all duration-200"
                     >
                       <div className="i-ph:x w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />

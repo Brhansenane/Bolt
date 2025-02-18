@@ -1,19 +1,33 @@
 import { forwardRef } from 'react';
 import { classNames } from '~/utils/classNames';
+import { themeTokens } from './theme/StyleGuide';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: boolean;
+  icon?: React.ReactNode;
+}
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({ className, type, ...props }, ref) => {
+const Input = forwardRef<HTMLInputElement, InputProps>(({ className, type, error, icon, ...props }, ref) => {
   return (
-    <input
-      type={type}
-      className={classNames(
-        'flex h-10 w-full rounded-md border border-bolt-elements-border bg-bolt-elements-background px-3 py-2 text-sm ring-offset-bolt-elements-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-bolt-elements-textSecondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-        className,
+    <div className="relative">
+      {icon && (
+        <div className={classNames('absolute left-3 top-1/2 -translate-y-1/2', themeTokens.icon.base)}>{icon}</div>
       )}
-      ref={ref}
-      {...props}
-    />
+      <input
+        type={type}
+        className={classNames(
+          themeTokens.input.base,
+          'w-full h-10 rounded-md',
+          'px-3 py-2 text-sm',
+          'file:border-0 file:bg-transparent file:text-sm file:font-medium',
+          icon ? 'pl-10' : '',
+          error ? 'border-red-500 dark:border-red-500' : '',
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    </div>
   );
 });
 

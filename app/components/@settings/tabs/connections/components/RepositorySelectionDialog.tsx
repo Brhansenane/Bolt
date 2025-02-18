@@ -1,31 +1,25 @@
-import type { GitHubRepoInfo, GitHubContent, RepositoryStats } from '~/types/GitHub';
-import { useState, useEffect } from 'react';
+import type { GitHubRepoInfo, RepositoryStats } from '~/types/GitHub';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import * as Dialog from '@radix-ui/react-dialog';
 import { classNames } from '~/utils/classNames';
 import { getLocalStorage } from '~/lib/persistence';
 import { motion } from 'framer-motion';
 import { formatSize } from '~/utils/formatSize';
-import { Input } from '~/components/ui/Input';
-
-interface GitHubTreeResponse {
-  tree: Array<{
-    path: string;
-    type: string;
-    size?: number;
-  }>;
-}
+import { themeTokens } from '~/components/ui/theme/StyleGuide';
+import { Icon } from '~/components/ui/Icon';
 
 interface RepositorySelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (url: string) => void;
+  onSelect: (url: string, branch: string) => void;
 }
 
 interface SearchFilters {
   language?: string;
   stars?: number;
   forks?: number;
+  user?: string;
 }
 
 interface StatsDialogProps {
@@ -36,11 +30,24 @@ interface StatsDialogProps {
   isLargeRepo?: boolean;
 }
 
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+interface RepositoryListProps {
+  repos: GitHubRepoInfo[];
+  isLoading: boolean;
+  onSelect: (repo: GitHubRepoInfo) => void;
+  activeTab: string;
+}
+
 function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDialogProps) {
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]" />
+        <Dialog.Overlay className={themeTokens.dialog.overlay} />
         <div className="fixed inset-0 flex items-center justify-center z-[9999]">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -49,23 +56,46 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
             transition={{ duration: 0.2 }}
             className="w-[90vw] md:w-[500px]"
           >
-            <Dialog.Content className="bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#E5E5E5] dark:border-[#333333] shadow-xl">
-              <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium text-[#111111] dark:text-white">Repository Overview</h3>
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm text-[#666666] dark:text-[#999999]">Repository Statistics:</p>
-                    <div className="space-y-2 text-sm text-[#111111] dark:text-white">
+            <Dialog.Content className={classNames(themeTokens.dialog.content, 'overflow-hidden')}>
+              <div className={themeTokens.dialog.header}>
+                <div className="flex items-center justify-between">
+                  <Dialog.Title className={classNames('text-xl font-semibold', themeTokens.text.primary)}>
+                    Repository Overview
+                  </Dialog.Title>
+                  <Dialog.Close onClick={onClose} className={themeTokens.dialog.close}>
+                    <div className={classNames('i-ph:x', themeTokens.icon.sizes.md)} />
+                  </Dialog.Close>
+                </div>
+              </div>
+              <div className={themeTokens.dialog.body}>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <p className={classNames('text-sm', themeTokens.text.secondary)}>Repository Statistics:</p>
+                    <div className={classNames('space-y-2 text-sm', themeTokens.text.primary)}>
                       <div className="flex items-center gap-2">
-                        <span className="i-ph:files text-purple-500 w-4 h-4" />
+                        <span
+                          className={classNames(
+                            'i-ph:files',
+                            themeTokens.icon.sizes.sm,
+                            themeTokens.icon.colors.accent,
+                          )}
+                        />
                         <span>Total Files: {stats.totalFiles}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="i-ph:database text-purple-500 w-4 h-4" />
+                        <span
+                          className={classNames(
+                            'i-ph:database',
+                            themeTokens.icon.sizes.sm,
+                            themeTokens.icon.colors.accent,
+                          )}
+                        />
                         <span>Total Size: {formatSize(stats.totalSize)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="i-ph:code text-purple-500 w-4 h-4" />
+                        <span
+                          className={classNames('i-ph:code', themeTokens.icon.sizes.sm, themeTokens.icon.colors.accent)}
+                        />
                         <span>
                           Languages:{' '}
                           {Object.entries(stats.languages)
@@ -77,22 +107,47 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
                       </div>
                       {stats.hasPackageJson && (
                         <div className="flex items-center gap-2">
-                          <span className="i-ph:package text-purple-500 w-4 h-4" />
+                          <span
+                            className={classNames(
+                              'i-ph:package',
+                              themeTokens.icon.sizes.sm,
+                              themeTokens.icon.colors.accent,
+                            )}
+                          />
                           <span>Has package.json</span>
                         </div>
                       )}
                       {stats.hasDependencies && (
                         <div className="flex items-center gap-2">
-                          <span className="i-ph:tree-structure text-purple-500 w-4 h-4" />
+                          <span
+                            className={classNames(
+                              'i-ph:tree-structure',
+                              themeTokens.icon.sizes.sm,
+                              themeTokens.icon.colors.accent,
+                            )}
+                          />
                           <span>Has dependencies</span>
                         </div>
                       )}
                     </div>
                   </div>
                   {isLargeRepo && (
-                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-500/10 rounded-lg text-sm flex items-start gap-2">
-                      <span className="i-ph:warning text-yellow-600 dark:text-yellow-500 w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <div className="text-yellow-800 dark:text-yellow-500">
+                    <div
+                      className={classNames(
+                        'p-3 rounded-lg text-sm flex items-start gap-2',
+                        themeTokens.status.warning.bg,
+                        themeTokens.status.warning.text,
+                      )}
+                    >
+                      <span
+                        className={classNames(
+                          'i-ph:warning',
+                          themeTokens.icon.sizes.sm,
+                          'flex-shrink-0 mt-0.5',
+                          themeTokens.status.warning.icon,
+                        )}
+                      />
+                      <div>
                         This repository is quite large ({formatSize(stats.totalSize)}). Importing it might take a while
                         and could impact performance.
                       </div>
@@ -100,19 +155,23 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
                   )}
                 </div>
               </div>
-              <div className="border-t border-[#E5E5E5] dark:border-[#333333] p-4 flex justify-end gap-3 bg-[#F9F9F9] dark:bg-[#252525] rounded-b-lg">
-                <button
+              <div className={themeTokens.dialog.footer}>
+                <motion.button
                   onClick={onClose}
-                  className="px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#333333] text-[#666666] hover:text-[#111111] dark:text-[#999999] dark:hover:text-white transition-colors"
+                  className={classNames(themeTokens.button.base, themeTokens.button.secondary)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   Cancel
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={onConfirm}
-                  className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+                  className={classNames(themeTokens.button.base, themeTokens.button.primary)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  OK
-                </button>
+                  Import Repository
+                </motion.button>
               </div>
             </Dialog.Content>
           </motion.div>
@@ -124,20 +183,22 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
 
 export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: RepositorySelectionDialogProps) {
   const [selectedRepository, setSelectedRepository] = useState<GitHubRepoInfo | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string>('');
+  const [branches, setBranches] = useState<string[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [repositories, setRepositories] = useState<GitHubRepoInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GitHubRepoInfo[]>([]);
   const [activeTab, setActiveTab] = useState<'my-repos' | 'search' | 'url'>('my-repos');
   const [customUrl, setCustomUrl] = useState('');
-  const [branches, setBranches] = useState<{ name: string; default?: boolean }[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({});
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [stats, setStats] = useState<RepositoryStats | null>(null);
   const [showStatsDialog, setShowStatsDialog] = useState(false);
   const [currentStats, setCurrentStats] = useState<RepositoryStats | null>(null);
-  const [pendingGitUrl, setPendingGitUrl] = useState<string>('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastSearchRef = useRef<string>('');
 
   // Fetch user's repositories when dialog opens
   useEffect(() => {
@@ -186,27 +247,45 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     }
   };
 
-  const handleSearch = async (query: string) => {
+  const buildSearchQuery = (query: string, currentFilters: SearchFilters): string => {
+    let searchQuery = query;
+
+    if (currentFilters.language) {
+      searchQuery += ` language:${currentFilters.language}`;
+    }
+
+    if (currentFilters.stars) {
+      searchQuery += ` stars:>${currentFilters.stars}`;
+    }
+
+    if (currentFilters.forks) {
+      searchQuery += ` forks:>${currentFilters.forks}`;
+    }
+
+    if (currentFilters.user) {
+      searchQuery += ` user:${currentFilters.user}`;
+    }
+
+    return searchQuery.trim();
+  };
+
+  const handleSearch = async (query: string, currentFilters: SearchFilters) => {
+    const fullQuery = buildSearchQuery(query, currentFilters);
+
+    // Don't search if query is empty or hasn't changed
+    if (!fullQuery || fullQuery === lastSearchRef.current) {
+      setIsSearching(false);
+      return;
+    }
+
+    lastSearchRef.current = fullQuery;
     setIsLoading(true);
+    setSearchError(null);
     setSearchResults([]);
 
     try {
-      let searchQuery = query;
-
-      if (filters.language) {
-        searchQuery += ` language:${filters.language}`;
-      }
-
-      if (filters.stars) {
-        searchQuery += ` stars:>${filters.stars}`;
-      }
-
-      if (filters.forks) {
-        searchQuery += ` forks:>${filters.forks}`;
-      }
-
       const response = await fetch(
-        `https://api.github.com/search/repositories?q=${encodeURIComponent(searchQuery)}&sort=stars&order=desc`,
+        `https://api.github.com/search/repositories?q=${encodeURIComponent(fullQuery)}&sort=stars&order=desc`,
         {
           headers: {
             Accept: 'application/vnd.github.v3+json',
@@ -215,12 +294,13 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       );
 
       if (!response.ok) {
-        throw new Error('Failed to search repositories');
+        throw new Error(
+          response.status === 403 ? 'Rate limit exceeded. Please try again later.' : 'Failed to search repositories',
+        );
       }
 
       const data = await response.json();
 
-      // Add type assertion and validation
       if (typeof data === 'object' && data !== null && 'items' in data && Array.isArray(data.items)) {
         setSearchResults(data.items as GitHubRepoInfo[]);
       } else {
@@ -228,20 +308,34 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       }
     } catch (error) {
       console.error('Error searching repos:', error);
-      toast.error('Failed to search repositories');
+      setSearchError(error instanceof Error ? error.message : 'Failed to search repositories');
+      setSearchResults([]);
     } finally {
       setIsLoading(false);
+      setIsSearching(false);
     }
   };
 
+  const debouncedSearch = (query: string, currentFilters: SearchFilters) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(() => {
+      handleSearch(query, currentFilters);
+    }, 500);
+  };
+
   const fetchBranches = async (repo: GitHubRepoInfo) => {
-    setIsLoading(true);
+    setIsLoadingBranches(true);
 
     try {
+      const connection = getLocalStorage('github_connection');
+      const headers: HeadersInit = connection?.token ? { Authorization: `Bearer ${connection.token}` } : {};
+
       const response = await fetch(`https://api.github.com/repos/${repo.full_name}/branches`, {
-        headers: {
-          Authorization: `Bearer ${getLocalStorage('github_connection')?.token}`,
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -250,22 +344,16 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
 
       const data = await response.json();
 
-      // Add type assertion and validation
-      if (Array.isArray(data) && data.every((item) => typeof item === 'object' && item !== null && 'name' in item)) {
-        setBranches(
-          data.map((branch) => ({
-            name: branch.name,
-            default: branch.name === repo.default_branch,
-          })),
-        );
-      } else {
-        throw new Error('Invalid branch data format');
+      if (Array.isArray(data)) {
+        const branchNames = data.map((b) => b.name);
+        setBranches(branchNames);
+        setSelectedBranch(repo.default_branch || branchNames[0] || 'main');
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
-      toast.error('Failed to fetch branches');
+      toast.error('Failed to fetch repository branches');
     } finally {
-      setIsLoading(false);
+      setIsLoadingBranches(false);
     }
   };
 
@@ -283,129 +371,14 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     return `${baseUrl}.git`;
   };
 
-  const verifyRepository = async (repoUrl: string): Promise<RepositoryStats | null> => {
-    try {
-      const [owner, repo] = repoUrl
-        .replace(/\.git$/, '')
-        .split('/')
-        .slice(-2);
-
-      const connection = getLocalStorage('github_connection');
-      const headers: HeadersInit = connection?.token ? { Authorization: `Bearer ${connection.token}` } : {};
-
-      // Fetch repository tree
-      const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
-        headers,
-      });
-
-      if (!treeResponse.ok) {
-        throw new Error('Failed to fetch repository structure');
-      }
-
-      const treeData = (await treeResponse.json()) as GitHubTreeResponse;
-
-      // Calculate repository stats
-      let totalSize = 0;
-      let totalFiles = 0;
-      const languages: { [key: string]: number } = {};
-      let hasPackageJson = false;
-      let hasDependencies = false;
-
-      for (const file of treeData.tree) {
-        if (file.type === 'blob') {
-          totalFiles++;
-
-          if (file.size) {
-            totalSize += file.size;
-          }
-
-          // Check for package.json
-          if (file.path === 'package.json') {
-            hasPackageJson = true;
-
-            // Fetch package.json content to check dependencies
-            const contentResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`, {
-              headers,
-            });
-
-            if (contentResponse.ok) {
-              const content = (await contentResponse.json()) as GitHubContent;
-              const packageJson = JSON.parse(Buffer.from(content.content, 'base64').toString());
-              hasDependencies = !!(
-                packageJson.dependencies ||
-                packageJson.devDependencies ||
-                packageJson.peerDependencies
-              );
-            }
-          }
-
-          // Detect language based on file extension
-          const ext = file.path.split('.').pop()?.toLowerCase();
-
-          if (ext) {
-            languages[ext] = (languages[ext] || 0) + (file.size || 0);
-          }
-        }
-      }
-
-      const stats: RepositoryStats = {
-        totalFiles,
-        totalSize,
-        languages,
-        hasPackageJson,
-        hasDependencies,
-      };
-
-      setStats(stats);
-
-      return stats;
-    } catch (error) {
-      console.error('Error verifying repository:', error);
-      toast.error('Failed to verify repository');
-
-      return null;
+  const handleImport = () => {
+    if (!selectedRepository || !selectedBranch) {
+      return;
     }
-  };
 
-  const handleImport = async () => {
-    try {
-      let gitUrl: string;
-
-      if (activeTab === 'url' && customUrl) {
-        gitUrl = formatGitUrl(customUrl);
-      } else if (selectedRepository) {
-        gitUrl = formatGitUrl(selectedRepository.html_url);
-
-        if (selectedBranch) {
-          gitUrl = `${gitUrl}#${selectedBranch}`;
-        }
-      } else {
-        return;
-      }
-
-      // Verify repository before importing
-      const stats = await verifyRepository(gitUrl);
-
-      if (!stats) {
-        return;
-      }
-
-      setCurrentStats(stats);
-      setPendingGitUrl(gitUrl);
-      setShowStatsDialog(true);
-    } catch (error) {
-      console.error('Error preparing repository:', error);
-      toast.error('Failed to prepare repository. Please try again.');
-    }
-  };
-
-  const handleStatsConfirm = () => {
-    setShowStatsDialog(false);
-
-    if (pendingGitUrl) {
-      onSelect(pendingGitUrl);
-      onClose();
-    }
+    const gitUrl = formatGitUrl(selectedRepository.html_url);
+    onSelect(gitUrl, selectedBranch);
+    handleClose();
   };
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
@@ -415,16 +388,23 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       parsedValue = value ? parseInt(value, 10) : undefined;
     }
 
-    setFilters((prev) => ({ ...prev, [key]: parsedValue }));
-    handleSearch(searchQuery);
+    const newFilters = { ...filters, [key]: parsedValue };
+    setFilters(newFilters);
+    debouncedSearch(searchQuery, newFilters);
   };
 
   // Handle dialog close properly
   const handleClose = () => {
-    setIsLoading(false); // Reset loading state
     setSearchQuery(''); // Reset search
     setSearchResults([]); // Reset results
-    onClose();
+    setSelectedRepository(null); // Reset selected repository
+    setShowStatsDialog(false); // Hide stats dialog
+    setCurrentStats(null); // Reset stats
+    setActiveTab('my-repos'); // Reset active tab
+    setFilters({}); // Reset filters
+    setSelectedBranch(''); // Reset selected branch
+    setBranches([]); // Reset branches
+    onClose(); // Call parent close handler
   };
 
   return (
@@ -437,158 +417,288 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[90vw] md:w-[600px] max-h-[85vh] overflow-hidden bg-white dark:bg-[#1A1A1A] rounded-xl shadow-xl z-[51] border border-[#E5E5E5] dark:border-[#333333]">
-          <div className="p-4 border-b border-[#E5E5E5] dark:border-[#333333] flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark">
-              Import GitHub Repository
-            </Dialog.Title>
-            <Dialog.Close
-              onClick={handleClose}
-              className={classNames(
-                'p-2 rounded-lg transition-all duration-200 ease-in-out',
-                'text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary',
-                'dark:text-bolt-elements-textTertiary-dark dark:hover:text-bolt-elements-textPrimary-dark',
-                'hover:bg-bolt-elements-background-depth-2 dark:hover:bg-bolt-elements-background-depth-3',
-                'focus:outline-none focus:ring-2 focus:ring-bolt-elements-borderColor dark:focus:ring-bolt-elements-borderColor-dark',
+        <Dialog.Overlay className={themeTokens.dialog.overlay} />
+        <Dialog.Content
+          className={classNames(
+            themeTokens.dialog.content,
+            'fixed top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2',
+            'w-[90vw] md:w-[600px] max-h-[85vh]',
+            'z-[51]',
+          )}
+        >
+          <div className={themeTokens.dialog.header}>
+            <div className="flex items-center justify-between">
+              <Dialog.Title className={classNames('text-xl font-semibold', themeTokens.text.primary)}>
+                {selectedRepository ? 'Select Branch' : 'Import GitHub Repository'}
+              </Dialog.Title>
+              {selectedRepository && (
+                <motion.button
+                  onClick={() => setSelectedRepository(null)}
+                  className={themeTokens.iconButton.base}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <div className={classNames('i-ph:arrow-left', themeTokens.icon.sizes.sm)} />
+                </motion.button>
               )}
-            >
-              <span className="i-ph:x block w-5 h-5" aria-hidden="true" />
-              <span className="sr-only">Close dialog</span>
-            </Dialog.Close>
+              <Dialog.Close onClick={handleClose} className={themeTokens.dialog.close}>
+                <div className={classNames('i-ph:x', themeTokens.icon.sizes.md)} />
+              </Dialog.Close>
+            </div>
           </div>
 
-          <div className="p-4">
-            <div className="flex gap-2 mb-4">
-              <TabButton active={activeTab === 'my-repos'} onClick={() => setActiveTab('my-repos')}>
-                <span className="i-ph:book-bookmark" />
-                My Repos
-              </TabButton>
-              <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')}>
-                <span className="i-ph:magnifying-glass" />
-                Search
-              </TabButton>
-              <TabButton active={activeTab === 'url'} onClick={() => setActiveTab('url')}>
-                <span className="i-ph:link" />
-                URL
-              </TabButton>
-            </div>
-
-            {activeTab === 'url' ? (
+          <div className={classNames(themeTokens.dialog.body, 'space-y-6')}>
+            {selectedRepository ? (
               <div className="space-y-4">
-                <Input
-                  placeholder="Enter repository URL"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  className={classNames('w-full', {
-                    'border-red-500': false,
-                  })}
-                />
-                <button
+                <div className={themeTokens.dialog.section}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={classNames(
+                        'i-ph:git-repository',
+                        themeTokens.icon.sizes.sm,
+                        themeTokens.icon.colors.accent,
+                      )}
+                    />
+                    <span className={classNames('text-sm font-medium', themeTokens.text.primary)}>
+                      {selectedRepository.full_name}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={themeTokens.dialog.section}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className={classNames(
+                        'i-ph:git-branch',
+                        themeTokens.icon.sizes.sm,
+                        themeTokens.icon.colors.accent,
+                      )}
+                    />
+                    <label className={classNames('text-sm font-medium', themeTokens.text.secondary)}>
+                      Select Branch
+                    </label>
+                  </div>
+                  {isLoadingBranches ? (
+                    <div className={classNames('py-4 text-center', themeTokens.text.secondary)}>
+                      <div className={classNames('i-ph:circle-notch animate-spin', themeTokens.icon.sizes.md)} />
+                      <p className="mt-2 text-sm">Loading branches...</p>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className={themeTokens.branchSelector.base}
+                    >
+                      {branches.map((branch) => (
+                        <option key={branch} value={branch} className={themeTokens.branchSelector.option}>
+                          {branch}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <motion.button
                   onClick={handleImport}
-                  disabled={!customUrl}
-                  className="w-full h-10 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 justify-center"
+                  className={classNames(themeTokens.button.base, themeTokens.button.primary, 'w-full')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={!selectedBranch}
                 >
-                  Import Repository
-                </button>
+                  <div className={classNames('i-ph:git-branch', themeTokens.icon.sizes.sm)} />
+                  Import from {selectedBranch}
+                </motion.button>
               </div>
             ) : (
               <>
-                {activeTab === 'search' && (
-                  <div className="space-y-4 mb-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Search repositories..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          handleSearch(e.target.value);
-                        }}
-                        className="flex-1 px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333] text-bolt-elements-textPrimary"
+                <div className="flex gap-2">
+                  <TabButton active={activeTab === 'my-repos'} onClick={() => setActiveTab('my-repos')}>
+                    <span className={classNames('i-ph:book-bookmark', themeTokens.icon.sizes.sm)} />
+                    My Repos
+                  </TabButton>
+                  <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')}>
+                    <span className={classNames('i-ph:magnifying-glass', themeTokens.icon.sizes.sm)} />
+                    Search
+                  </TabButton>
+                  <TabButton active={activeTab === 'url'} onClick={() => setActiveTab('url')}>
+                    <span className={classNames('i-ph:link', themeTokens.icon.sizes.sm)} />
+                    URL
+                  </TabButton>
+                </div>
+
+                {activeTab === 'url' ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={classNames('i-ph:link', themeTokens.icon.sizes.sm, themeTokens.icon.colors.accent)}
                       />
-                      <button
-                        onClick={() => setFilters({})}
-                        className="px-3 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary"
-                      >
-                        <span className="i-ph:funnel-simple" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Filter by language..."
-                        value={filters.language || ''}
-                        onChange={(e) => {
-                          setFilters({ ...filters, language: e.target.value });
-                          handleSearch(searchQuery);
-                        }}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Min stars..."
-                        value={filters.stars || ''}
-                        onChange={(e) => handleFilterChange('stars', e.target.value)}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
-                      />
+                      <label className={classNames('text-sm font-medium', themeTokens.text.secondary)}>
+                        Repository URL
+                      </label>
                     </div>
                     <input
-                      type="number"
-                      placeholder="Min forks..."
-                      value={filters.forks || ''}
-                      onChange={(e) => handleFilterChange('forks', e.target.value)}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
+                      placeholder="Enter repository URL"
+                      value={customUrl}
+                      onChange={(e) => setCustomUrl(e.target.value)}
+                      className={classNames(themeTokens.input.base, 'w-full')}
                     />
+                    <button
+                      onClick={handleImport}
+                      disabled={!customUrl}
+                      className={classNames(themeTokens.button.base, themeTokens.button.primary, 'w-full')}
+                    >
+                      <div className={classNames('i-ph:git-branch', themeTokens.icon.sizes.sm)} />
+                      Import Repository
+                    </button>
                   </div>
-                )}
+                ) : (
+                  <>
+                    {activeTab === 'search' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={classNames(
+                              'i-ph:magnifying-glass',
+                              themeTokens.icon.sizes.sm,
+                              themeTokens.icon.colors.accent,
+                            )}
+                          />
+                          <label className={classNames('text-sm font-medium', themeTokens.text.secondary)}>
+                            Search Repositories
+                          </label>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              placeholder="Search repositories..."
+                              value={searchQuery}
+                              onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                debouncedSearch(e.target.value, filters);
+                              }}
+                              className={classNames(themeTokens.input.base, 'pl-9')}
+                            />
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                              <Icon
+                                name={isSearching ? 'circle-notch' : 'magnifying-glass'}
+                                size="sm"
+                                className={isSearching ? 'animate-spin' : ''}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        {searchError && (
+                          <div
+                            className={classNames(
+                              'p-3 rounded-lg text-sm flex items-start gap-2',
+                              themeTokens.status.error.bg,
+                              themeTokens.status.error.text,
+                            )}
+                          >
+                            <Icon name="warning" size="sm" className={themeTokens.status.error.icon} />
+                            <span>{searchError}</span>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div
+                                className={classNames(
+                                  'i-ph:code',
+                                  themeTokens.icon.sizes.sm,
+                                  themeTokens.icon.colors.accent,
+                                )}
+                              />
+                              <label className={classNames('text-xs font-medium', themeTokens.text.secondary)}>
+                                Language
+                              </label>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Filter by language..."
+                              value={filters.language || ''}
+                              onChange={(e) => handleFilterChange('language', e.target.value)}
+                              className={themeTokens.input.base}
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div
+                                className={classNames(
+                                  'i-ph:user',
+                                  themeTokens.icon.sizes.sm,
+                                  themeTokens.icon.colors.accent,
+                                )}
+                              />
+                              <label className={classNames('text-xs font-medium', themeTokens.text.secondary)}>
+                                User
+                              </label>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Filter by user..."
+                              value={filters.user || ''}
+                              onChange={(e) => handleFilterChange('user', e.target.value)}
+                              className={themeTokens.input.base}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div
+                              className={classNames(
+                                'i-ph:star',
+                                themeTokens.icon.sizes.sm,
+                                themeTokens.icon.colors.accent,
+                              )}
+                            />
+                            <label className={classNames('text-xs font-medium', themeTokens.text.secondary)}>
+                              Stars
+                            </label>
+                          </div>
+                          <input
+                            type="number"
+                            placeholder="Min stars..."
+                            value={filters.stars || ''}
+                            onChange={(e) => handleFilterChange('stars', e.target.value)}
+                            className={themeTokens.input.base}
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div
+                              className={classNames(
+                                'i-ph:git-fork',
+                                themeTokens.icon.sizes.sm,
+                                themeTokens.icon.colors.accent,
+                              )}
+                            />
+                            <label className={classNames('text-xs font-medium', themeTokens.text.secondary)}>
+                              Forks
+                            </label>
+                          </div>
+                          <input
+                            type="number"
+                            placeholder="Min forks..."
+                            value={filters.forks || ''}
+                            onChange={(e) => handleFilterChange('forks', e.target.value)}
+                            className={themeTokens.input.base}
+                          />
+                        </div>
+                      </div>
+                    )}
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {selectedRepository ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedRepository(null)}
-                          className="p-1.5 rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#252525]"
-                        >
-                          <span className="i-ph:arrow-left w-4 h-4" />
-                        </button>
-                        <h3 className="font-medium">{selectedRepository.full_name}</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-bolt-elements-textSecondary">Select Branch</label>
-                        <select
-                          value={selectedBranch}
-                          onChange={(e) => setSelectedBranch(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark focus:outline-none focus:ring-2 focus:ring-bolt-elements-borderColor dark:focus:ring-bolt-elements-borderColor-dark"
-                        >
-                          {branches.map((branch) => (
-                            <option
-                              key={branch.name}
-                              value={branch.name}
-                              className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark"
-                            >
-                              {branch.name} {branch.default ? '(default)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleImport}
-                          className="w-full h-10 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-all duration-200 flex items-center gap-2 justify-center"
-                        >
-                          Import Selected Branch
-                        </button>
-                      </div>
+                    <div className={classNames('max-h-[400px] overflow-y-auto pr-2', themeTokens.scrollbar)}>
+                      <RepositoryList
+                        repos={activeTab === 'my-repos' ? repositories : searchResults}
+                        isLoading={isLoading}
+                        onSelect={handleRepoSelect}
+                        activeTab={activeTab}
+                      />
                     </div>
-                  ) : (
-                    <RepositoryList
-                      repos={activeTab === 'my-repos' ? repositories : searchResults}
-                      isLoading={isLoading}
-                      onSelect={handleRepoSelect}
-                      activeTab={activeTab}
-                    />
-                  )}
-                </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -597,8 +707,8 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       {currentStats && (
         <StatsDialog
           isOpen={showStatsDialog}
-          onClose={handleStatsConfirm}
-          onConfirm={handleStatsConfirm}
+          onClose={handleClose}
+          onConfirm={handleImport}
           stats={currentStats}
           isLargeRepo={currentStats.totalSize > 50 * 1024 * 1024}
         />
@@ -607,15 +717,13 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton({ active, onClick, children }: TabButtonProps) {
   return (
     <button
       onClick={onClick}
       className={classNames(
-        'px-4 py-2 h-10 rounded-lg transition-all duration-200 flex items-center gap-2 min-w-[120px] justify-center',
-        active
-          ? 'bg-purple-500 text-white hover:bg-purple-600'
-          : 'bg-[#F5F5F5] dark:bg-[#252525] text-bolt-elements-textPrimary dark:text-white hover:bg-[#E5E5E5] dark:hover:bg-[#333333] border border-[#E5E5E5] dark:border-[#333333]',
+        themeTokens.button.tab.base,
+        active ? themeTokens.button.tab.active : themeTokens.button.tab.inactive,
       )}
     >
       {children}
@@ -623,71 +731,93 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function RepositoryList({
-  repos,
-  isLoading,
-  onSelect,
-  activeTab,
-}: {
-  repos: GitHubRepoInfo[];
-  isLoading: boolean;
-  onSelect: (repo: GitHubRepoInfo) => void;
-  activeTab: string;
-}) {
+function RepositoryList({ repos, isLoading, onSelect, activeTab }: RepositoryListProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8 text-bolt-elements-textSecondary">
-        <span className="i-ph:spinner animate-spin mr-2" />
-        Loading repositories...
+      <div className={classNames('py-8 text-center', themeTokens.text.secondary)}>
+        <div className={classNames('i-ph:circle-notch', themeTokens.icon.sizes.md, 'mx-auto animate-spin')} />
+        <p className="mt-2 text-sm">Loading repositories...</p>
       </div>
     );
   }
 
   if (repos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-bolt-elements-textSecondary">
-        <span className="i-ph:folder-simple-dashed w-12 h-12 mb-2 opacity-50" />
-        <p>{activeTab === 'my-repos' ? 'No repositories found' : 'Search for repositories'}</p>
+      <div className={classNames('py-8 text-center', themeTokens.text.secondary)}>
+        <div className={classNames('i-ph:folder-open', themeTokens.icon.sizes.lg, 'mx-auto opacity-50')} />
+        <p className="mt-2 text-sm">
+          {activeTab === 'search' ? 'No repositories found matching your search' : 'No repositories found'}
+        </p>
       </div>
     );
   }
 
-  return repos.map((repo) => <RepositoryCard key={repo.full_name} repo={repo} onSelect={() => onSelect(repo)} />);
+  return (
+    <div className="space-y-2 py-2">
+      {repos.map((repo) => (
+        <RepositoryCard key={repo.full_name} repo={repo} onSelect={() => onSelect(repo)} />
+      ))}
+    </div>
+  );
 }
 
 function RepositoryCard({ repo, onSelect }: { repo: GitHubRepoInfo; onSelect: () => void }) {
   return (
-    <div className="p-4 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333] hover:border-purple-500/50 transition-colors">
-      <div className="flex items-center justify-between mb-2">
+    <motion.button
+      onClick={onSelect}
+      className={classNames(
+        themeTokens.dialog.section,
+        'w-full text-left',
+        'hover:' + themeTokens.background.depth3.split(' ')[0],
+        'group transition-colors duration-200',
+      )}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+    >
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="i-ph:git-repository text-bolt-elements-textTertiary" />
-          <h3 className="font-medium text-bolt-elements-textPrimary dark:text-white">{repo.name}</h3>
+          <div
+            className={classNames('i-ph:git-repository', themeTokens.icon.sizes.sm, themeTokens.icon.colors.accent)}
+          />
+          <span className={classNames('text-sm font-medium', themeTokens.text.primary, 'group-hover:text-purple-500')}>
+            {repo.name}
+          </span>
         </div>
-        <button
-          onClick={onSelect}
-          className="px-4 py-2 h-10 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-all duration-200 flex items-center gap-2 min-w-[120px] justify-center"
-        >
-          <span className="i-ph:download-simple w-4 h-4" />
-          Import
-        </button>
+        {repo.private && (
+          <span
+            className={classNames(
+              'text-xs px-2 py-1 rounded-full',
+              themeTokens.status.private.bg,
+              themeTokens.status.private.text,
+            )}
+          >
+            Private
+          </span>
+        )}
       </div>
-      {repo.description && <p className="text-sm text-bolt-elements-textSecondary mb-3">{repo.description}</p>}
-      <div className="flex items-center gap-4 text-sm text-bolt-elements-textTertiary">
+      {repo.description && (
+        <p className={classNames('mt-2 text-xs line-clamp-2', themeTokens.text.secondary)}>{repo.description}</p>
+      )}
+      <div className={classNames('mt-3 flex items-center gap-3 text-xs', themeTokens.text.tertiary)}>
         {repo.language && (
           <span className="flex items-center gap-1">
-            <span className="i-ph:code" />
+            <div className={classNames('i-ph:code', 'w-3.5 h-3.5')} />
             {repo.language}
           </span>
         )}
         <span className="flex items-center gap-1">
-          <span className="i-ph:star" />
+          <div className={classNames('i-ph:star', 'w-3.5 h-3.5')} />
           {repo.stargazers_count.toLocaleString()}
         </span>
         <span className="flex items-center gap-1">
-          <span className="i-ph:clock" />
+          <div className={classNames('i-ph:git-fork', 'w-3.5 h-3.5')} />
+          {repo.forks_count.toLocaleString()}
+        </span>
+        <span className="flex items-center gap-1">
+          <div className={classNames('i-ph:clock', 'w-3.5 h-3.5')} />
           {new Date(repo.updated_at).toLocaleDateString()}
         </span>
       </div>
-    </div>
+    </motion.button>
   );
 }

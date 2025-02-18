@@ -25,7 +25,23 @@ type IconButtonWithChildrenProps = {
 
 type IconButtonProps = IconButtonWithoutChildrenProps | IconButtonWithChildrenProps;
 
-// Componente IconButton com suporte a refs
+const getIconSize = (size: IconSize): string => {
+  switch (size) {
+    case 'sm':
+      return 'text-sm';
+    case 'md':
+      return 'text-base';
+    case 'lg':
+      return 'text-lg';
+    case 'xl':
+      return 'text-xl';
+    case 'xxl':
+      return 'text-2xl';
+    default:
+      return 'text-xl';
+  }
+};
+
 export const IconButton = memo(
   forwardRef(
     (
@@ -46,9 +62,12 @@ export const IconButton = memo(
         <button
           ref={ref}
           className={classNames(
-            'flex items-center text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed',
+            'flex items-center text-bolt-elements-textTertiary bg-transparent rounded-md p-1 transition-all duration-200',
+            'hover:text-accent-500 hover:bg-accent-500/5',
+            'dark:text-white/60 dark:hover:text-accent-500/90 dark:hover:bg-accent-500/10',
+            'disabled:cursor-not-allowed disabled:opacity-30',
             {
-              [classNames('opacity-30', disabledClassName)]: disabled,
+              [disabledClassName ?? '']: disabled,
             },
             className,
           )}
@@ -68,17 +87,3 @@ export const IconButton = memo(
     },
   ),
 );
-
-function getIconSize(size: IconSize) {
-  if (size === 'sm') {
-    return 'text-sm';
-  } else if (size === 'md') {
-    return 'text-md';
-  } else if (size === 'lg') {
-    return 'text-lg';
-  } else if (size === 'xl') {
-    return 'text-xl';
-  } else {
-    return 'text-2xl';
-  }
-}

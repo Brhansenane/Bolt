@@ -5,7 +5,6 @@ import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import BackgroundRays from '~/components/ui/BackgroundRays';
 import { ControlPanel } from '~/components/@settings';
-import { SettingsButton } from '~/components/ui/SettingsButton';
 import { useState } from 'react';
 
 export const meta: MetaFunction = () => {
@@ -22,9 +21,6 @@ export default function Index() {
       <BackgroundRays />
       <Header />
       <ClientOnly fallback={<BaseChat />}>{() => <Chat />}</ClientOnly>
-      <div className="fixed bottom-4 right-4">
-        <SettingsButton onClick={() => setShowControlPanel(true)} />
-      </div>
       <ClientOnly>
         {() => <ControlPanel open={showControlPanel} onClose={() => setShowControlPanel(false)} />}
       </ClientOnly>

@@ -15,6 +15,7 @@ export const TAB_ICONS: Record<TabType, string> = {
   update: 'i-ph:arrow-clockwise-fill',
   'task-manager': 'i-ph:chart-line-fill',
   'tab-management': 'i-ph:squares-four-fill',
+  sync: 'i-ph:arrows-clockwise-fill',
 };
 
 export const TAB_LABELS: Record<TabType, string> = {
@@ -32,6 +33,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   update: 'Updates',
   'task-manager': 'Task Manager',
   'tab-management': 'Tab Management',
+  sync: 'File Sync',
 };
 
 export const TAB_DESCRIPTIONS: Record<TabType, string> = {
@@ -49,6 +51,7 @@ export const TAB_DESCRIPTIONS: Record<TabType, string> = {
   update: 'Check for updates and release notes',
   'task-manager': 'Monitor system resources and processes',
   'tab-management': 'Configure visible tabs and their order',
+  sync: 'Configure file synchronization settings and view sync status',
 };
 
 export const DEFAULT_TAB_CONFIG = [
@@ -66,10 +69,11 @@ export const DEFAULT_TAB_CONFIG = [
   { id: 'settings', visible: false, window: 'user' as const, order: 8 },
   { id: 'task-manager', visible: false, window: 'user' as const, order: 9 },
   { id: 'service-status', visible: false, window: 'user' as const, order: 10 },
+  { id: 'sync', visible: false, window: 'user' as const, order: 11 },
 
   // User Window Tabs (Hidden, controlled by TaskManagerTab)
-  { id: 'debug', visible: false, window: 'user' as const, order: 11 },
-  { id: 'update', visible: false, window: 'user' as const, order: 12 },
+  { id: 'debug', visible: false, window: 'user' as const, order: 12 },
+  { id: 'update', visible: false, window: 'user' as const, order: 13 },
 
   // Developer Window Tabs (All visible by default)
   { id: 'features', visible: true, window: 'developer' as const, order: 0 },
@@ -85,4 +89,5 @@ export const DEFAULT_TAB_CONFIG = [
   { id: 'service-status', visible: true, window: 'developer' as const, order: 10 },
   { id: 'debug', visible: true, window: 'developer' as const, order: 11 },
   { id: 'update', visible: true, window: 'developer' as const, order: 12 },
+  { id: 'sync', visible: true, window: 'developer' as const, order: 13 },
 ];

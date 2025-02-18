@@ -911,6 +911,14 @@ const TaskManagerTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <div className="flex items-center gap-2">
+          <h4 className="text-md font-medium text-bolt-elements-textPrimary">Task Manager</h4>
+          <span className="px-2 py-0.5 text-xs rounded-md bg-purple-500/10 text-purple-500 font-medium">BETA</span>
+        </div>
+        <p className="text-sm text-bolt-elements-textSecondary">Monitor and test LLM provider service status</p>
+      </div>
+
       {/* Power Profile Selection */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
