@@ -9,6 +9,9 @@ import { Dialog, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-toastify';
 
+// Import event logs styles
+import '~/styles/components/event-logs.scss';
+
 interface SelectOption {
   value: string;
   label: string;
@@ -212,44 +215,28 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={classNames(
-        'flex flex-col gap-2',
-        'rounded-lg p-4',
-        'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-        'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-        style.bg,
-        'transition-all duration-200',
-      )}
+      className={classNames('log-entry', log.category || log.level)}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <span className={classNames('text-lg', style.icon, style.color)} />
-          <div className="flex flex-col gap-1">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{log.message}</div>
+      <div className="log-entry-header">
+        <div className="header-left">
+          <span className={classNames('log-icon', style.icon)} />
+          <div className="log-content">
+            <div className="log-message">{log.message}</div>
             {log.details && (
               <>
-                <button
-                  onClick={() => setLocalExpanded(!localExpanded)}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
-                >
+                <button onClick={() => setLocalExpanded(!localExpanded)} className="log-details-toggle">
                   {localExpanded ? 'Hide' : 'Show'} Details
                 </button>
                 {localExpanded && renderDetails(log.details)}
               </>
             )}
-            <div className="flex items-center gap-2">
-              <div className={classNames('px-2 py-0.5 rounded text-xs font-medium uppercase', style.badge)}>
-                {log.level}
-              </div>
-              {log.category && (
-                <div className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                  {log.category}
-                </div>
-              )}
+            <div className="log-badges">
+              <div className="log-badge">{log.level}</div>
+              {log.category && <div className="log-category">{log.category}</div>}
             </div>
           </div>
         </div>
-        {showTimestamp && <time className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{timestamp}</time>}
+        {showTimestamp && <time className="log-timestamp">{timestamp}</time>}
       </div>
     </motion.div>
   );
@@ -857,27 +844,17 @@ export function EventLogsTab() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="event-logs">
+      <div className="toolbar">
         <DropdownMenu.Root open={showLevelFilter} onOpenChange={setShowLevelFilter}>
           <DropdownMenu.Trigger asChild>
-            <button
-              className={classNames(
-                'flex items-center gap-2',
-                'rounded-lg px-3 py-1.5',
-                'text-sm text-gray-900 dark:text-white',
-                'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-                'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-                'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-                'transition-all duration-200',
-              )}
-            >
+            <button className="filter-dropdown-trigger">
               <span
-                className={classNames('text-lg', selectedLevelOption?.icon || 'i-ph:funnel')}
+                className={classNames('filter-icon', selectedLevelOption?.icon || 'i-ph:funnel')}
                 style={{ color: selectedLevelOption?.color }}
               />
               {selectedLevelOption?.label || 'All Types'}
-              <span className="i-ph:caret-down text-lg text-gray-500 dark:text-gray-400" />
+              <span className="dropdown-icon i-ph:caret-down" />
             </button>
           </DropdownMenu.Trigger>
 
@@ -907,50 +884,43 @@ export function EventLogsTab() {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="controls">
+          <div className="toggle-group">
             <Switch
               checked={showTimestamps}
               onCheckedChange={(value) => handlePreferenceChange('timestamps', value)}
               className="data-[state=checked]:bg-purple-500"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">Show Timestamps</span>
+            <span className="toggle-label">Show Timestamps</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="toggle-group">
             <Switch
               checked={use24Hour}
               onCheckedChange={(value) => handlePreferenceChange('24hour', value)}
               className="data-[state=checked]:bg-purple-500"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">24h Time</span>
+            <span className="toggle-label">24h Time</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="toggle-group">
             <Switch
               checked={autoExpand}
               onCheckedChange={(value) => handlePreferenceChange('autoExpand', value)}
               className="data-[state=checked]:bg-purple-500"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">Auto Expand</span>
+            <span className="toggle-label">Auto Expand</span>
           </div>
 
-          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+          <div className="divider" />
 
           <button
             onClick={handleRefresh}
-            className={classNames(
-              'group flex items-center gap-2',
-              'rounded-lg px-3 py-1.5',
-              'text-sm text-gray-900 dark:text-white',
-              'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-              'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-              'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-              'transition-all duration-200',
-              { 'animate-spin': isRefreshing },
-            )}
+            className={classNames('action-button', {
+              refreshing: isRefreshing,
+            })}
           >
-            <span className="i-ph:arrows-clockwise text-lg text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
+            <span className="action-icon i-ph:arrows-clockwise" />
             Refresh
           </button>
 
@@ -958,42 +928,26 @@ export function EventLogsTab() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="relative">
+      <div className="log-entries">
+        <div className="search-container">
           <input
             type="text"
             placeholder="Search logs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={classNames(
-              'w-full px-4 py-2 pl-10 rounded-lg',
-              'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-              'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-              'text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400',
-              'focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500',
-              'transition-all duration-200',
-            )}
+            className="search-input"
           />
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <div className="i-ph:magnifying-glass text-lg text-gray-500 dark:text-gray-400" />
+          <div className="search-icon">
+            <div className="i-ph:magnifying-glass" />
           </div>
         </div>
 
         {filteredLogs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={classNames(
-              'flex flex-col items-center justify-center gap-4',
-              'rounded-lg p-8 text-center',
-              'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-              'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            )}
-          >
-            <span className="i-ph:clipboard-text text-4xl text-gray-400 dark:text-gray-600" />
-            <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">No Logs Found</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Try adjusting your search or filters</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="empty-state">
+            <span className="empty-icon i-ph:clipboard-text" />
+            <div>
+              <h3 className="empty-title">No Logs Found</h3>
+              <p className="empty-description">Try adjusting your search or filters</p>
             </div>
           </motion.div>
         ) : (

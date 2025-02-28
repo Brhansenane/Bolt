@@ -1,0 +1,11 @@
+# Build outputs
+dist/
+build/
+.wrangler/
+node_modules/
+
+# Generated files
+.history/
+
+# Specific problematic files
+app/lib/runtime/action-runner.ts

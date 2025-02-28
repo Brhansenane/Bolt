@@ -3,13 +3,14 @@ import { useGit } from '~/lib/hooks/useGit';
 import type { Message } from 'ai';
 import { detectProjectCommands, createCommandsMessage, escapeBoltTags } from '~/utils/projectCommands';
 import { generateId } from '~/utils/fileUtils';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 import { RepositorySelectionDialog } from '~/components/@settings/tabs/connections/components/RepositorySelectionDialog';
 import { classNames } from '~/utils/classNames';
 import { Button } from '~/components/ui/Button';
 import type { IChatMetadata } from '~/lib/persistence/db';
+import { getLocalStorage } from '~/lib/persistence';
 
 const IGNORE_PATTERNS = [
   'node_modules/**',
@@ -45,75 +46,122 @@ export default function GitCloneButton({ importChat, className }: GitCloneButton
   const { ready, gitClone } = useGit();
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [hasGitHubConnection, setHasGitHubConnection] = useState(false);
 
-  const handleClone = async (repoUrl: string) => {
-    if (!ready) {
-      return;
+  // Use a ref to track if we're in the process of opening the dialog
+  const openingDialogRef = useRef(false);
+
+  // Add debugging to check GitHub connection on mount and when it changes
+  useEffect(() => {
+    const checkConnection = () => {
+      const connection = getLocalStorage('github_connection');
+      const hasConnection = !!connection?.token && !!connection?.user;
+      setHasGitHubConnection(hasConnection);
+
+      console.log('GitHub connection status:', {
+        exists: !!connection,
+        hasToken: !!connection?.token,
+        hasUser: !!connection?.user,
+        ready,
+      });
+    };
+
+    // Check immediately
+    checkConnection();
+
+    // Set up a listener for localStorage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'github_connection') {
+        checkConnection();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [ready]);
+
+  // Add an effect to log when the dialog state changes
+  useEffect(() => {
+    console.log('Dialog state changed in GitCloneButton:', isDialogOpen);
+
+    // If we're opening the dialog, clear the ref
+    if (isDialogOpen) {
+      openingDialogRef.current = false;
     }
+  }, [isDialogOpen]);
 
-    setLoading(true);
+  const handleClone = useCallback(
+    async (repoUrl: string) => {
+      if (!ready) {
+        toast.error('WebContainer is not ready. Please try again in a moment.');
+        return;
+      }
 
-    try {
-      const { workdir, data } = await gitClone(repoUrl);
+      setLoading(true);
+      setIsDialogOpen(false); // Close the dialog when starting to clone
 
-      if (importChat) {
-        const filePaths = Object.keys(data).filter((filePath) => !ig.ignores(filePath));
-        const textDecoder = new TextDecoder('utf-8');
+      try {
+        const { workdir, data } = await gitClone(repoUrl);
 
-        let totalSize = 0;
-        const skippedFiles: string[] = [];
-        const fileContents = [];
+        if (importChat) {
+          const filePaths = Object.keys(data).filter((filePath) => !ig.ignores(filePath));
+          const textDecoder = new TextDecoder('utf-8');
 
-        for (const filePath of filePaths) {
-          const { data: content, encoding } = data[filePath];
+          let totalSize = 0;
+          const skippedFiles: string[] = [];
+          const fileContents = [];
 
-          // Skip binary files
-          if (
-            content instanceof Uint8Array &&
-            !filePath.match(/\.(txt|md|astro|mjs|js|jsx|ts|tsx|json|html|css|scss|less|yml|yaml|xml|svg)$/i)
-          ) {
-            skippedFiles.push(filePath);
-            continue;
+          for (const filePath of filePaths) {
+            const { data: content, encoding } = data[filePath];
+
+            // Skip binary files
+            if (
+              content instanceof Uint8Array &&
+              !filePath.match(/\.(txt|md|astro|mjs|js|jsx|ts|tsx|json|html|css|scss|less|yml|yaml|xml|svg)$/i)
+            ) {
+              skippedFiles.push(filePath);
+              continue;
+            }
+
+            try {
+              const textContent =
+                encoding === 'utf8' ? content : content instanceof Uint8Array ? textDecoder.decode(content) : '';
+
+              if (!textContent) {
+                continue;
+              }
+
+              // Check file size
+              const fileSize = new TextEncoder().encode(textContent).length;
+
+              if (fileSize > MAX_FILE_SIZE) {
+                skippedFiles.push(`${filePath} (too large: ${Math.round(fileSize / 1024)}KB)`);
+                continue;
+              }
+
+              // Check total size
+              if (totalSize + fileSize > MAX_TOTAL_SIZE) {
+                skippedFiles.push(`${filePath} (would exceed total size limit)`);
+                continue;
+              }
+
+              totalSize += fileSize;
+              fileContents.push({
+                path: filePath,
+                content: textContent,
+              });
+            } catch (e: any) {
+              skippedFiles.push(`${filePath} (error: ${e.message})`);
+            }
           }
 
-          try {
-            const textContent =
-              encoding === 'utf8' ? content : content instanceof Uint8Array ? textDecoder.decode(content) : '';
+          const commands = await detectProjectCommands(fileContents);
+          const commandsMessage = createCommandsMessage(commands);
 
-            if (!textContent) {
-              continue;
-            }
-
-            // Check file size
-            const fileSize = new TextEncoder().encode(textContent).length;
-
-            if (fileSize > MAX_FILE_SIZE) {
-              skippedFiles.push(`${filePath} (too large: ${Math.round(fileSize / 1024)}KB)`);
-              continue;
-            }
-
-            // Check total size
-            if (totalSize + fileSize > MAX_TOTAL_SIZE) {
-              skippedFiles.push(`${filePath} (would exceed total size limit)`);
-              continue;
-            }
-
-            totalSize += fileSize;
-            fileContents.push({
-              path: filePath,
-              content: textContent,
-            });
-          } catch (e: any) {
-            skippedFiles.push(`${filePath} (error: ${e.message})`);
-          }
-        }
-
-        const commands = await detectProjectCommands(fileContents);
-        const commandsMessage = createCommandsMessage(commands);
-
-        const filesMessage: Message = {
-          role: 'assistant',
-          content: `Cloning the repo ${repoUrl} into ${workdir}
+          const filesMessage: Message = {
+            role: 'assistant',
+            content: `Cloning the repo ${repoUrl} into ${workdir}
 ${
   skippedFiles.length > 0
     ? `\nSkipped files (${skippedFiles.length}):
@@ -131,31 +179,74 @@ ${escapeBoltTags(file.content)}
   )
   .join('\n')}
 </boltArtifact>`,
-          id: generateId(),
-          createdAt: new Date(),
-        };
+            id: generateId(),
+            createdAt: new Date(),
+          };
 
-        const messages = [filesMessage];
+          const messages = [filesMessage];
 
-        if (commandsMessage) {
-          messages.push(commandsMessage);
+          if (commandsMessage) {
+            messages.push(commandsMessage);
+          }
+
+          await importChat(`Git Project:${repoUrl.split('/').slice(-1)[0]}`, messages);
         }
-
-        await importChat(`Git Project:${repoUrl.split('/').slice(-1)[0]}`, messages);
+      } catch (error) {
+        console.error('Error during import:', error);
+        toast.error('Failed to import repository');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error during import:', error);
-      toast.error('Failed to import repository');
-    } finally {
-      setLoading(false);
+    },
+    [ready, gitClone, importChat],
+  );
+
+  const handleOpenDialog = useCallback(() => {
+    console.log('Opening repository selection dialog, ready status:', ready);
+
+    if (!ready) {
+      toast.error('WebContainer is not ready. Please try again in a moment.');
+      return;
     }
-  };
+
+    if (!hasGitHubConnection) {
+      toast.error('Please connect your GitHub account in Settings → Connections first');
+      return;
+    }
+
+    // Set the ref to indicate we're opening the dialog
+    openingDialogRef.current = true;
+
+    /*
+     * Set dialog open state with a small delay to ensure React has time to update
+     * This helps prevent race conditions with state updates
+     */
+    setTimeout(() => {
+      setIsDialogOpen(true);
+      console.log('Dialog open state set to true');
+    }, 10);
+  }, [ready, hasGitHubConnection]);
+
+  const handleCloseDialog = useCallback(() => {
+    console.log('Dialog closed by user');
+
+    // Only close if we're not in the process of opening
+    if (!openingDialogRef.current) {
+      setIsDialogOpen(false);
+    }
+  }, []);
 
   return (
     <>
       <Button
-        onClick={() => setIsDialogOpen(true)}
-        title="Clone a Git Repo"
+        onClick={handleOpenDialog}
+        title={
+          !ready
+            ? 'WebContainer is initializing...'
+            : !hasGitHubConnection
+              ? 'GitHub connection required'
+              : 'Clone a Git Repo'
+        }
         variant="outline"
         size="lg"
         className={classNames(
@@ -173,7 +264,8 @@ ${escapeBoltTags(file.content)}
         Clone a Git Repo
       </Button>
 
-      <RepositorySelectionDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} onSelect={handleClone} />
+      {/* Always render the dialog component but control its visibility with isOpen prop */}
+      <RepositorySelectionDialog isOpen={isDialogOpen} onClose={handleCloseDialog} onSelect={handleClone} />
 
       {loading && <LoadingOverlay message="Please wait while we clone the repository..." />}
     </>

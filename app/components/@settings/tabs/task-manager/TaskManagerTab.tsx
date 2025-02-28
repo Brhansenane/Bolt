@@ -17,6 +17,9 @@ import { useUpdateCheck } from '~/lib/hooks/useUpdateCheck';
 import { tabConfigurationStore, type TabConfig } from '~/lib/stores/tabConfigurationStore';
 import { useStore } from 'zustand';
 
+// Import task manager styles
+import '~/styles/components/task-manager.scss';
+
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -777,16 +780,13 @@ const TaskManagerTab: React.FC = () => {
     };
   }, [energySaverMode]);
 
-  const getUsageColor = (usage: number): string => {
-    if (usage > 80) {
-      return 'text-red-500';
-    }
-
-    if (usage > 50) {
-      return 'text-yellow-500';
-    }
-
-    return 'text-gray-500';
+  // Update the getUsageColor function to work with classNames
+  const getUsageColor = (usage: number): Record<string, boolean> => {
+    return {
+      'text-red-500': usage > 80,
+      'text-yellow-500': usage > 50 && usage <= 80,
+      'text-gray-500': usage <= 50,
+    };
   };
 
   const renderUsageGraph = (data: number[], label: string, color: string) => {
@@ -910,7 +910,7 @@ const TaskManagerTab: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="task-manager">
       {/* Power Profile Selection */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -941,7 +941,9 @@ const TaskManagerTab: React.FC = () => {
               <div className="i-ph:leaf-duotone w-4 h-4 text-bolt-elements-textSecondary" />
               <label
                 htmlFor="energySaver"
-                className={classNames('text-sm text-bolt-elements-textSecondary', { 'opacity-50': autoEnergySaver })}
+                className={classNames('text-sm text-bolt-elements-textSecondary', {
+                  'opacity-50': autoEnergySaver,
+                })}
               >
                 Energy Saver
                 {energySaverMode && <span className="ml-2 text-xs text-bolt-elements-textSecondary">Active</span>}

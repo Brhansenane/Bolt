@@ -7,9 +7,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/component
 import { Progress } from '~/components/ui/Progress';
 import { ScrollArea } from '~/components/ui/ScrollArea';
 import { Badge } from '~/components/ui/Badge';
-import { Dialog, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
+import { Dialog, DialogRoot } from '~/components/ui/Dialog';
 import { jsPDF } from 'jspdf';
 import { useSettings } from '~/lib/hooks/useSettings';
+import '~/styles/components/debug.scss';
 
 interface SystemInfo {
   os: string;
@@ -1167,47 +1168,25 @@ export default function DebugTab() {
 
     return (
       <DialogRoot open={isOpen} onOpenChange={handleOpenChange}>
-        <button
-          onClick={() => setIsOpen(true)}
-          className={classNames(
-            'group flex items-center gap-2',
-            'rounded-lg px-3 py-1.5',
-            'text-sm text-gray-900 dark:text-white',
-            'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-            'transition-all duration-200',
-          )}
-        >
-          <span className="i-ph:download text-lg text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
+        <button onClick={() => setIsOpen(true)} className="action-button">
+          <span className="i-ph:download button-icon" />
           Export
         </button>
 
         <Dialog showCloseButton>
-          <div className="p-6">
-            <DialogTitle className="flex items-center gap-2">
-              <div className="i-ph:download w-5 h-5" />
+          <div className="export-dialog">
+            <div className="export-title">
+              <div className="i-ph:download export-icon" />
               Export Debug Information
-            </DialogTitle>
+            </div>
 
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="export-options">
               {exportFormats.map((format) => (
-                <button
-                  key={format.id}
-                  onClick={() => handleFormatClick(format.handler)}
-                  className={classNames(
-                    'flex items-center gap-3 px-4 py-3 text-sm rounded-lg transition-colors w-full text-left',
-                    'bg-white dark:bg-[#0A0A0A]',
-                    'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-                    'hover:bg-purple-50 dark:hover:bg-[#1a1a1a]',
-                    'hover:border-purple-200 dark:hover:border-purple-900/30',
-                    'text-bolt-elements-textPrimary',
-                  )}
-                >
-                  <div className={classNames(format.icon, 'w-5 h-5')} />
-                  <div>
-                    <div className="font-medium">{format.label}</div>
-                    <div className="text-xs text-bolt-elements-textSecondary mt-0.5">
+                <button key={format.id} onClick={() => handleFormatClick(format.handler)} className="export-option">
+                  <div className={classNames(format.icon, 'option-icon')} />
+                  <div className="option-content">
+                    <div className="option-title">{format.label}</div>
+                    <div className="option-description">
                       {format.id === 'json' && 'Export as a structured JSON file'}
                       {format.id === 'csv' && 'Export as a CSV spreadsheet'}
                       {format.id === 'pdf' && 'Export as a formatted PDF document'}
@@ -1267,48 +1246,41 @@ export default function DebugTab() {
   const status = getOllamaStatus() as StatusResult;
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto p-4">
+    <div className="debug-container">
       {/* Quick Stats Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="stats-grid">
         {/* Errors Card */}
-        <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
-          <div className="flex items-center gap-2">
-            <div className="i-ph:warning-octagon text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Errors</div>
+        <div className="stats-card">
+          <div className="stats-card-header">
+            <div className="i-ph:warning-octagon stats-icon" />
+            <div className="stats-label">Errors</div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <span
-              className={classNames('text-2xl font-semibold', errorLogs.length > 0 ? 'text-red-500' : 'text-green-500')}
-            >
+          <div className="stats-card-value">
+            <span className={classNames('value-text', errorLogs.length > 0 ? 'error' : 'success')}>
               {errorLogs.length}
             </span>
           </div>
-          <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
-            <div
-              className={classNames(
-                'w-3.5 h-3.5',
-                errorLogs.length > 0 ? 'i-ph:warning text-red-500' : 'i-ph:check-circle text-green-500',
-              )}
-            />
+          <div className={classNames('stats-card-meta', errorLogs.length > 0 ? 'error' : 'success')}>
+            <div className={classNames('meta-icon', errorLogs.length > 0 ? 'i-ph:warning' : 'i-ph:check-circle')} />
             {errorLogs.length > 0 ? 'Errors detected' : 'No errors detected'}
           </div>
         </div>
 
         {/* Memory Usage Card */}
-        <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
-          <div className="flex items-center gap-2">
-            <div className="i-ph:cpu text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Memory Usage</div>
+        <div className="stats-card">
+          <div className="stats-card-header">
+            <div className="i-ph:cpu stats-icon" />
+            <div className="stats-label">Memory Usage</div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="stats-card-value">
             <span
               className={classNames(
-                'text-2xl font-semibold',
+                'value-text',
                 (systemInfo?.memory?.percentage ?? 0) > 80
-                  ? 'text-red-500'
+                  ? 'error'
                   : (systemInfo?.memory?.percentage ?? 0) > 60
-                    ? 'text-yellow-500'
-                    : 'text-green-500',
+                    ? 'warning'
+                    : 'success',
               )}
             >
               {systemInfo?.memory?.percentage ?? 0}%
@@ -1325,135 +1297,134 @@ export default function DebugTab() {
                   : '[&>div]:bg-green-500',
             )}
           />
-          <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
-            <div className="i-ph:info w-3.5 h-3.5 text-purple-500" />
+          <div className="stats-card-meta">
+            <div className="i-ph:info meta-icon" />
             Used: {systemInfo?.memory.used ?? '0 GB'} / {systemInfo?.memory.total ?? '0 GB'}
           </div>
         </div>
 
         {/* Page Load Time Card */}
-        <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
-          <div className="flex items-center gap-2">
-            <div className="i-ph:timer text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Page Load Time</div>
+        <div className="stats-card">
+          <div className="stats-card-header">
+            <div className="i-ph:timer stats-icon" />
+            <div className="stats-label">Page Load Time</div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="stats-card-value">
             <span
               className={classNames(
-                'text-2xl font-semibold',
+                'value-text',
                 (systemInfo?.performance.timing.loadTime ?? 0) > 2000
-                  ? 'text-red-500'
+                  ? 'error'
                   : (systemInfo?.performance.timing.loadTime ?? 0) > 1000
-                    ? 'text-yellow-500'
-                    : 'text-green-500',
+                    ? 'warning'
+                    : 'success',
               )}
             >
               {systemInfo ? (systemInfo.performance.timing.loadTime / 1000).toFixed(2) : '-'}s
             </span>
           </div>
-          <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
-            <div className="i-ph:code w-3.5 h-3.5 text-purple-500" />
+          <div className="stats-card-meta">
+            <div className="i-ph:code meta-icon" />
             DOM Ready: {systemInfo ? (systemInfo.performance.timing.domReadyTime / 1000).toFixed(2) : '-'}s
           </div>
         </div>
 
         {/* Network Speed Card */}
-        <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
-          <div className="flex items-center gap-2">
-            <div className="i-ph:wifi-high text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Network Speed</div>
+        <div className="stats-card">
+          <div className="stats-card-header">
+            <div className="i-ph:wifi-high stats-icon" />
+            <div className="stats-label">Network Speed</div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="stats-card-value">
             <span
               className={classNames(
-                'text-2xl font-semibold',
+                'value-text',
                 (systemInfo?.network.downlink ?? 0) < 5
-                  ? 'text-red-500'
+                  ? 'error'
                   : (systemInfo?.network.downlink ?? 0) < 10
-                    ? 'text-yellow-500'
-                    : 'text-green-500',
+                    ? 'warning'
+                    : 'success',
               )}
             >
               {systemInfo?.network.downlink ?? '-'} Mbps
             </span>
           </div>
-          <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
-            <div className="i-ph:activity w-3.5 h-3.5 text-purple-500" />
+          <div className="stats-card-meta">
+            <div className="i-ph:activity meta-icon" />
             RTT: {systemInfo?.network.rtt ?? '-'} ms
           </div>
         </div>
 
         {/* Ollama Service Card - Now spans all 4 columns */}
-        <div className="md:col-span-4 p-6 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[260px] flex flex-col">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:robot text-purple-500 w-5 h-5" />
-              <div>
-                <div className="text-base font-medium text-bolt-elements-textPrimary">Ollama Service</div>
-                <div className="text-xs text-bolt-elements-textSecondary mt-0.5">{status.message}</div>
+        <div className="service-card">
+          <div className="service-card-header">
+            <div className="header-left">
+              <div className="i-ph:robot service-icon" />
+              <div className="service-info">
+                <div className="service-title">Ollama Service</div>
+                <div className="service-description">{status.message}</div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-bolt-elements-background-depth-3">
+            <div className="header-right">
+              <div className="status-badge">
                 <div
-                  className={classNames('w-2 h-2 rounded-full animate-pulse', status.bgColor, {
-                    'shadow-lg shadow-green-500/20': status.status === 'Running',
-                    'shadow-lg shadow-red-500/20': status.status === 'Not Running',
+                  className={classNames('status-indicator', {
+                    running: status.status === 'Running',
+                    'not-running': status.status === 'Not Running',
                   })}
                 />
-                <span className={classNames('text-xs font-medium flex items-center gap-1', status.color)}>
+                <span
+                  className={classNames('status-text', {
+                    running: status.status === 'Running',
+                    'not-running': status.status === 'Not Running',
+                  })}
+                >
                   {status.status}
                 </span>
               </div>
-              <div className="text-[10px] text-bolt-elements-textTertiary flex items-center gap-1.5">
-                <div className="i-ph:clock w-3 h-3" />
+              <div className="timestamp">
+                <div className="i-ph:clock clock-icon" />
                 {ollamaStatus.lastChecked.toLocaleTimeString()}
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex-1 min-h-0 flex flex-col">
+          <div className="service-card-content">
             {status.status === 'Running' && ollamaStatus.models && ollamaStatus.models.length > 0 ? (
               <>
-                <div className="text-xs font-medium text-bolt-elements-textSecondary flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="i-ph:cube-duotone w-4 h-4 text-purple-500" />
+                <div className="models-header">
+                  <div className="models-label">
+                    <div className="i-ph:cube-duotone models-icon" />
                     <span>Installed Models</span>
                     <Badge variant="secondary" className="ml-1">
                       {ollamaStatus.models.length}
                     </Badge>
                   </div>
                 </div>
-                <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-600">
-                  <div className="grid grid-cols-2 gap-3 pr-2">
-                    {ollamaStatus.models.map((model) => (
-                      <div
-                        key={model.name}
-                        className="text-sm bg-bolt-elements-background-depth-3 hover:bg-bolt-elements-background-depth-4 rounded-lg px-4 py-3 flex items-center justify-between transition-colors group"
-                      >
-                        <div className="flex items-center gap-2 text-bolt-elements-textSecondary">
-                          <div className="i-ph:cube w-4 h-4 text-purple-500/70 group-hover:text-purple-500 transition-colors" />
-                          <span className="font-mono truncate">{model.name}</span>
-                        </div>
-                        <Badge variant="outline" className="ml-2 text-xs font-mono">
-                          {Math.round(parseInt(model.size) / 1024 / 1024)}MB
-                        </Badge>
+                <div className="models-grid">
+                  {ollamaStatus.models.map((model) => (
+                    <div key={model.name} className="model-item">
+                      <div className="model-name">
+                        <div className="i-ph:cube model-icon" />
+                        <span>{model.name}</span>
                       </div>
-                    ))}
-                  </div>
+                      <Badge variant="outline" className="model-size">
+                        {Math.round(parseInt(model.size) / 1024 / 1024)}MB
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3 max-w-[280px] text-center">
+              <div className="empty-state">
+                <div className="empty-content">
                   <div
-                    className={classNames('w-12 h-12', {
-                      'i-ph:warning-circle text-red-500/80':
-                        status.status === 'Not Running' || status.status === 'Disabled',
-                      'i-ph:cube-duotone text-purple-500/80': status.status === 'Running',
+                    className={classNames('empty-icon', {
+                      warning: status.status === 'Not Running' || status.status === 'Disabled',
+                      info: status.status === 'Running',
                     })}
                   />
-                  <span className="text-sm text-bolt-elements-textSecondary">{status.message}</span>
+                  <span className="empty-message">{status.message}</span>
                 </div>
               </div>
             )}
@@ -1462,24 +1433,16 @@ export default function DebugTab() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4">
+      <div className="action-buttons">
         <button
           onClick={getSystemInfo}
           disabled={loading.systemInfo}
-          className={classNames(
-            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            'bg-white dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-50 dark:hover:bg-[#1a1a1a]',
-            'hover:border-purple-200 dark:hover:border-purple-900/30',
-            'text-bolt-elements-textPrimary',
-            { 'opacity-50 cursor-not-allowed': loading.systemInfo },
-          )}
+          className={classNames('action-button', { disabled: loading.systemInfo })}
         >
           {loading.systemInfo ? (
-            <div className="i-ph:spinner-gap w-4 h-4 animate-spin" />
+            <div className="i-ph:spinner-gap spinner" />
           ) : (
-            <div className="i-ph:gear w-4 h-4" />
+            <div className="i-ph:gear button-icon" />
           )}
           Update System Info
         </button>
@@ -1487,20 +1450,12 @@ export default function DebugTab() {
         <button
           onClick={handleLogPerformance}
           disabled={loading.performance}
-          className={classNames(
-            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            'bg-white dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-50 dark:hover:bg-[#1a1a1a]',
-            'hover:border-purple-200 dark:hover:border-purple-900/30',
-            'text-bolt-elements-textPrimary',
-            { 'opacity-50 cursor-not-allowed': loading.performance },
-          )}
+          className={classNames('action-button', { disabled: loading.performance })}
         >
           {loading.performance ? (
-            <div className="i-ph:spinner-gap w-4 h-4 animate-spin" />
+            <div className="i-ph:spinner-gap spinner" />
           ) : (
-            <div className="i-ph:chart-bar w-4 h-4" />
+            <div className="i-ph:chart-bar button-icon" />
           )}
           Log Performance
         </button>
@@ -1508,41 +1463,21 @@ export default function DebugTab() {
         <button
           onClick={checkErrors}
           disabled={loading.errors}
-          className={classNames(
-            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            'bg-white dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-50 dark:hover:bg-[#1a1a1a]',
-            'hover:border-purple-200 dark:hover:border-purple-900/30',
-            'text-bolt-elements-textPrimary',
-            { 'opacity-50 cursor-not-allowed': loading.errors },
-          )}
+          className={classNames('action-button', { disabled: loading.errors })}
         >
-          {loading.errors ? (
-            <div className="i-ph:spinner-gap w-4 h-4 animate-spin" />
-          ) : (
-            <div className="i-ph:warning w-4 h-4" />
-          )}
+          {loading.errors ? <div className="i-ph:spinner-gap spinner" /> : <div className="i-ph:warning button-icon" />}
           Check Errors
         </button>
 
         <button
           onClick={getWebAppInfo}
           disabled={loading.webAppInfo}
-          className={classNames(
-            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-            'bg-white dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-50 dark:hover:bg-[#1a1a1a]',
-            'hover:border-purple-200 dark:hover:border-purple-900/30',
-            'text-bolt-elements-textPrimary',
-            { 'opacity-50 cursor-not-allowed': loading.webAppInfo },
-          )}
+          className={classNames('action-button', { disabled: loading.webAppInfo })}
         >
           {loading.webAppInfo ? (
-            <div className="i-ph:spinner-gap w-4 h-4 animate-spin" />
+            <div className="i-ph:spinner-gap spinner" />
           ) : (
-            <div className="i-ph:info w-4 h-4" />
+            <div className="i-ph:info button-icon" />
           )}
           Fetch WebApp Info
         </button>
@@ -1554,146 +1489,133 @@ export default function DebugTab() {
       <Collapsible
         open={openSections.system}
         onOpenChange={(open: boolean) => setOpenSections((prev) => ({ ...prev, system: open }))}
-        className="w-full"
+        className="collapsible-section"
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-6 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:cpu text-purple-500 w-5 h-5" />
-              <h3 className="text-base font-medium text-bolt-elements-textPrimary">System Information</h3>
-            </div>
-            <div
-              className={classNames(
-                'i-ph:caret-down w-4 h-4 transform transition-transform duration-200',
-                openSections.system ? 'rotate-180' : '',
-              )}
-            />
+        <CollapsibleTrigger className="collapsible-section-trigger">
+          <div className="trigger-content">
+            <div className="i-ph:cpu section-icon" />
+            <h3 className="section-title">System Information</h3>
           </div>
+          <div className={classNames('i-ph:caret-down caret-icon', openSections.system ? 'open' : '')} />
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
-          <div className="p-6 mt-2 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            {systemInfo ? (
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:desktop text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">OS: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.os}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:device-mobile text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Platform: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.platform}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:microchip text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Architecture: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.arch}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:cpu text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">CPU Cores: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.cpus}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:node text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Node Version: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.node}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:wifi-high text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Network Type: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.network.type} ({systemInfo.network.effectiveType})
-                    </span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:gauge text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Network Speed: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.network.downlink}Mbps (RTT: {systemInfo.network.rtt}ms)
-                    </span>
-                  </div>
-                  {systemInfo.battery && (
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:battery-charging text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Battery: </span>
-                      <span className="text-bolt-elements-textPrimary">
-                        {systemInfo.battery.level.toFixed(1)}% {systemInfo.battery.charging ? '(Charging)' : ''}
-                      </span>
-                    </div>
-                  )}
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:hard-drive text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Storage: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.storage.usage / (1024 * 1024 * 1024)).toFixed(2)}GB /{' '}
-                      {(systemInfo.storage.quota / (1024 * 1024 * 1024)).toFixed(2)}GB
-                    </span>
-                  </div>
+        <CollapsibleContent className="collapsible-section-content">
+          {systemInfo ? (
+            <div className="content-grid">
+              <div className="space-y-2">
+                <div className="info-item">
+                  <div className="i-ph:desktop item-icon" />
+                  <span className="item-label">OS: </span>
+                  <span className="item-value">{systemInfo.os}</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:database text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Memory Usage: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.memory.used} / {systemInfo.memory.total} ({systemInfo.memory.percentage}%)
+                <div className="info-item">
+                  <div className="i-ph:device-mobile item-icon" />
+                  <span className="item-label">Platform: </span>
+                  <span className="item-value">{systemInfo.platform}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:microchip item-icon" />
+                  <span className="item-label">Architecture: </span>
+                  <span className="item-value">{systemInfo.arch}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:cpu item-icon" />
+                  <span className="item-label">CPU Cores: </span>
+                  <span className="item-value">{systemInfo.cpus}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:node item-icon" />
+                  <span className="item-label">Node Version: </span>
+                  <span className="item-value">{systemInfo.node}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:wifi-high item-icon" />
+                  <span className="item-label">Network Type: </span>
+                  <span className="item-value">
+                    {systemInfo.network.type} ({systemInfo.network.effectiveType})
+                  </span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:gauge item-icon" />
+                  <span className="item-label">Network Speed: </span>
+                  <span className="item-value">
+                    {systemInfo.network.downlink}Mbps (RTT: {systemInfo.network.rtt}ms)
+                  </span>
+                </div>
+                {systemInfo.battery && (
+                  <div className="info-item">
+                    <div className="i-ph:battery-charging item-icon" />
+                    <span className="item-label">Battery: </span>
+                    <span className="item-value">
+                      {systemInfo.battery.level.toFixed(1)}% {systemInfo.battery.charging ? '(Charging)' : ''}
                     </span>
                   </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:browser text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Browser: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.browser.name} {systemInfo.browser.version}
-                    </span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:monitor text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Screen: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.screen.width}x{systemInfo.screen.height} ({systemInfo.screen.pixelRatio}x)
-                    </span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:clock text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Timezone: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.time.timezone}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:translate text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Language: </span>
-                    <span className="text-bolt-elements-textPrimary">{systemInfo.browser.language}</span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:chart-pie text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">JS Heap: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB /{' '}
-                      {(systemInfo.performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB (
-                      {systemInfo.performance.memory.usagePercentage.toFixed(1)}%)
-                    </span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:timer text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">Page Load: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.loadTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <div className="text-sm flex items-center gap-2">
-                    <div className="i-ph:code text-bolt-elements-textSecondary w-4 h-4" />
-                    <span className="text-bolt-elements-textSecondary">DOM Ready: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.domReadyTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
+                )}
+                <div className="info-item">
+                  <div className="i-ph:hard-drive item-icon" />
+                  <span className="item-label">Storage: </span>
+                  <span className="item-value">
+                    {(systemInfo.storage.usage / (1024 * 1024 * 1024)).toFixed(2)}GB /{' '}
+                    {(systemInfo.storage.quota / (1024 * 1024 * 1024)).toFixed(2)}GB
+                  </span>
                 </div>
               </div>
-            ) : (
-              <div className="text-sm text-bolt-elements-textSecondary">Loading system information...</div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <div className="info-item">
+                  <div className="i-ph:database item-icon" />
+                  <span className="item-label">Memory Usage: </span>
+                  <span className="item-value">
+                    {systemInfo.memory.used} / {systemInfo.memory.total} ({systemInfo.memory.percentage}%)
+                  </span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:browser item-icon" />
+                  <span className="item-label">Browser: </span>
+                  <span className="item-value">
+                    {systemInfo.browser.name} {systemInfo.browser.version}
+                  </span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:monitor item-icon" />
+                  <span className="item-label">Screen: </span>
+                  <span className="item-value">
+                    {systemInfo.screen.width}x{systemInfo.screen.height} ({systemInfo.screen.pixelRatio}x)
+                  </span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:clock item-icon" />
+                  <span className="item-label">Timezone: </span>
+                  <span className="item-value">{systemInfo.time.timezone}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:translate item-icon" />
+                  <span className="item-label">Language: </span>
+                  <span className="item-value">{systemInfo.browser.language}</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:chart-pie item-icon" />
+                  <span className="item-label">JS Heap: </span>
+                  <span className="item-value">
+                    {(systemInfo.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB /{' '}
+                    {(systemInfo.performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB (
+                    {systemInfo.performance.memory.usagePercentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:timer item-icon" />
+                  <span className="item-label">Page Load: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.loadTime / 1000).toFixed(2)}s</span>
+                </div>
+                <div className="info-item">
+                  <div className="i-ph:code item-icon" />
+                  <span className="item-label">DOM Ready: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.domReadyTime / 1000).toFixed(2)}s</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-bolt-elements-textSecondary">Loading system information...</div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -1701,89 +1623,68 @@ export default function DebugTab() {
       <Collapsible
         open={openSections.performance}
         onOpenChange={(open: boolean) => setOpenSections((prev) => ({ ...prev, performance: open }))}
-        className="w-full"
+        className="collapsible-section"
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-6 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:chart-line text-purple-500 w-5 h-5" />
-              <h3 className="text-base font-medium text-bolt-elements-textPrimary">Performance Metrics</h3>
-            </div>
-            <div
-              className={classNames(
-                'i-ph:caret-down w-4 h-4 transform transition-transform duration-200',
-                openSections.performance ? 'rotate-180' : '',
-              )}
-            />
+        <CollapsibleTrigger className="collapsible-section-trigger">
+          <div className="trigger-content">
+            <div className="i-ph:chart-line section-icon" />
+            <h3 className="section-title">Performance Metrics</h3>
           </div>
+          <div className={classNames('i-ph:caret-down caret-icon', openSections.performance ? 'open' : '')} />
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
-          <div className="p-6 mt-2 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            {systemInfo && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Page Load Time: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.loadTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">DOM Ready Time: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.domReadyTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Request Time: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.requestTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Redirect Time: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.timing.redirectTime / 1000).toFixed(2)}s
-                    </span>
-                  </div>
+        <CollapsibleContent className="collapsible-section-content">
+          {systemInfo && (
+            <div className="content-grid">
+              <div className="space-y-2">
+                <div className="info-item">
+                  <span className="item-label">Page Load Time: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.loadTime / 1000).toFixed(2)}s</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">JS Heap Usage: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {(systemInfo.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB /{' '}
-                      {(systemInfo.performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Heap Utilization: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.performance.memory.usagePercentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Navigation Type: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.performance.navigation.type === 0
-                        ? 'Navigate'
-                        : systemInfo.performance.navigation.type === 1
-                          ? 'Reload'
-                          : systemInfo.performance.navigation.type === 2
-                            ? 'Back/Forward'
-                            : 'Other'}
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-bolt-elements-textSecondary">Redirects: </span>
-                    <span className="text-bolt-elements-textPrimary">
-                      {systemInfo.performance.navigation.redirectCount}
-                    </span>
-                  </div>
+                <div className="info-item">
+                  <span className="item-label">DOM Ready Time: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.domReadyTime / 1000).toFixed(2)}s</span>
+                </div>
+                <div className="info-item">
+                  <span className="item-label">Request Time: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.requestTime / 1000).toFixed(2)}s</span>
+                </div>
+                <div className="info-item">
+                  <span className="item-label">Redirect Time: </span>
+                  <span className="item-value">{(systemInfo.performance.timing.redirectTime / 1000).toFixed(2)}s</span>
                 </div>
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <div className="info-item">
+                  <span className="item-label">JS Heap Usage: </span>
+                  <span className="item-value">
+                    {(systemInfo.performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1)}MB /{' '}
+                    {(systemInfo.performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(1)}MB
+                  </span>
+                </div>
+                <div className="info-item">
+                  <span className="item-label">Heap Utilization: </span>
+                  <span className="item-value">{systemInfo.performance.memory.usagePercentage.toFixed(1)}%</span>
+                </div>
+                <div className="info-item">
+                  <span className="item-label">Navigation Type: </span>
+                  <span className="item-value">
+                    {systemInfo.performance.navigation.type === 0
+                      ? 'Navigate'
+                      : systemInfo.performance.navigation.type === 1
+                        ? 'Reload'
+                        : systemInfo.performance.navigation.type === 2
+                          ? 'Back/Forward'
+                          : 'Other'}
+                  </span>
+                </div>
+                <div className="info-item">
+                  <span className="item-label">Redirects: </span>
+                  <span className="item-value">{systemInfo.performance.navigation.redirectCount}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -1791,107 +1692,130 @@ export default function DebugTab() {
       <Collapsible
         open={openSections.webapp}
         onOpenChange={(open) => setOpenSections((prev) => ({ ...prev, webapp: open }))}
-        className="w-full"
+        className="collapsible-section"
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-6 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:info text-blue-500 w-5 h-5" />
-              <h3 className="text-base font-medium text-bolt-elements-textPrimary">WebApp Information</h3>
-              {loading.webAppInfo && <span className="loading loading-spinner loading-sm" />}
-            </div>
-            <div
-              className={classNames(
-                'i-ph:caret-down w-4 h-4 transform transition-transform duration-200',
-                openSections.webapp ? 'rotate-180' : '',
-              )}
-            />
+        <CollapsibleTrigger className="collapsible-section-trigger">
+          <div className="trigger-content">
+            <div className="i-ph:info section-icon" />
+            <h3 className="section-title">WebApp Information</h3>
           </div>
+          <div className={classNames('i-ph:caret-down caret-icon', openSections.webapp ? 'open' : '')} />
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
-          <div className="p-6 mt-2 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            {loading.webAppInfo ? (
-              <div className="flex items-center justify-center p-8">
-                <span className="loading loading-spinner loading-lg" />
-              </div>
-            ) : !webAppInfo ? (
-              <div className="flex flex-col items-center justify-center p-8 text-bolt-elements-textSecondary">
-                <div className="i-ph:warning-circle w-8 h-8 mb-2" />
-                <p>Failed to load WebApp information</p>
-                <button
-                  onClick={() => getWebAppInfo()}
-                  className="mt-4 px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Basic Information</h3>
-                  <div className="space-y-3">
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:app-window text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Name:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.name}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:tag text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Version:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.version}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:certificate text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">License:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.license}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:cloud text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Environment:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.environment}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:node text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Node Version:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.runtimeInfo.nodeVersion}</span>
-                    </div>
+        <CollapsibleContent className="collapsible-section-content">
+          {loading.webAppInfo ? (
+            <div className="flex items-center justify-center p-8">
+              <span className="loading loading-spinner loading-lg" />
+            </div>
+          ) : !webAppInfo ? (
+            <div className="flex flex-col items-center justify-center p-8 text-bolt-elements-textSecondary">
+              <div className="i-ph:warning-circle w-8 h-8 mb-2" />
+              <p>Failed to load WebApp information</p>
+              <button
+                onClick={() => getWebAppInfo()}
+                className="mt-4 px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Basic Information</h3>
+                <div className="space-y-3">
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:app-window text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Name:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.name}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:tag text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Version:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.version}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:certificate text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">License:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.license}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:cloud text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Environment:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.environment}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:node text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Node Version:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.runtimeInfo.nodeVersion}</span>
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Git Information</h3>
-                  <div className="space-y-3">
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:git-branch text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Branch:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.branch}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:git-commit text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Commit:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.commitHash}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:user text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Author:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.author}</span>
-                    </div>
-                    <div className="text-sm flex items-center gap-2">
-                      <div className="i-ph:clock text-bolt-elements-textSecondary w-4 h-4" />
-                      <span className="text-bolt-elements-textSecondary">Commit Time:</span>
-                      <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.commitTime}</span>
-                    </div>
+              <div>
+                <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Git Information</h3>
+                <div className="space-y-3">
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:git-branch text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Branch:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.branch}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:git-commit text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Commit:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.commitHash}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:user text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Author:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.author}</span>
+                  </div>
+                  <div className="text-sm flex items-center gap-2">
+                    <div className="i-ph:clock text-bolt-elements-textSecondary w-4 h-4" />
+                    <span className="text-bolt-elements-textSecondary">Commit Time:</span>
+                    <span className="text-bolt-elements-textPrimary">{webAppInfo.gitInfo.local.commitTime}</span>
+                  </div>
 
-                    {webAppInfo.gitInfo.github && (
-                      <>
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  {webAppInfo.gitInfo.github && (
+                    <>
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <div className="text-sm flex items-center gap-2">
+                          <div className="i-ph:git-repository text-bolt-elements-textSecondary w-4 h-4" />
+                          <span className="text-bolt-elements-textSecondary">Repository:</span>
+                          <span className="text-bolt-elements-textPrimary">
+                            {webAppInfo.gitInfo.github.currentRepo.fullName}
+                            {webAppInfo.gitInfo.isForked && ' (fork)'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <div className="i-ph:star text-yellow-500 w-4 h-4" />
+                            <span className="text-bolt-elements-textSecondary">
+                              {webAppInfo.gitInfo.github.currentRepo.stars}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="i-ph:git-fork text-blue-500 w-4 h-4" />
+                            <span className="text-bolt-elements-textSecondary">
+                              {webAppInfo.gitInfo.github.currentRepo.forks}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="i-ph:warning-circle text-red-500 w-4 h-4" />
+                            <span className="text-bolt-elements-textSecondary">
+                              {webAppInfo.gitInfo.github.currentRepo.openIssues}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {webAppInfo.gitInfo.github.upstream && (
+                        <div className="mt-2">
                           <div className="text-sm flex items-center gap-2">
-                            <div className="i-ph:git-repository text-bolt-elements-textSecondary w-4 h-4" />
-                            <span className="text-bolt-elements-textSecondary">Repository:</span>
+                            <div className="i-ph:git-fork text-bolt-elements-textSecondary w-4 h-4" />
+                            <span className="text-bolt-elements-textSecondary">Upstream:</span>
                             <span className="text-bolt-elements-textPrimary">
-                              {webAppInfo.gitInfo.github.currentRepo.fullName}
-                              {webAppInfo.gitInfo.isForked && ' (fork)'}
+                              {webAppInfo.gitInfo.github.upstream.fullName}
                             </span>
                           </div>
 
@@ -1899,69 +1823,36 @@ export default function DebugTab() {
                             <div className="flex items-center gap-1">
                               <div className="i-ph:star text-yellow-500 w-4 h-4" />
                               <span className="text-bolt-elements-textSecondary">
-                                {webAppInfo.gitInfo.github.currentRepo.stars}
+                                {webAppInfo.gitInfo.github.upstream.stars}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <div className="i-ph:git-fork text-blue-500 w-4 h-4" />
                               <span className="text-bolt-elements-textSecondary">
-                                {webAppInfo.gitInfo.github.currentRepo.forks}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <div className="i-ph:warning-circle text-red-500 w-4 h-4" />
-                              <span className="text-bolt-elements-textSecondary">
-                                {webAppInfo.gitInfo.github.currentRepo.openIssues}
+                                {webAppInfo.gitInfo.github.upstream.forks}
                               </span>
                             </div>
                           </div>
                         </div>
-
-                        {webAppInfo.gitInfo.github.upstream && (
-                          <div className="mt-2">
-                            <div className="text-sm flex items-center gap-2">
-                              <div className="i-ph:git-fork text-bolt-elements-textSecondary w-4 h-4" />
-                              <span className="text-bolt-elements-textSecondary">Upstream:</span>
-                              <span className="text-bolt-elements-textPrimary">
-                                {webAppInfo.gitInfo.github.upstream.fullName}
-                              </span>
-                            </div>
-
-                            <div className="mt-2 flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1">
-                                <div className="i-ph:star text-yellow-500 w-4 h-4" />
-                                <span className="text-bolt-elements-textSecondary">
-                                  {webAppInfo.gitInfo.github.upstream.stars}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <div className="i-ph:git-fork text-blue-500 w-4 h-4" />
-                                <span className="text-bolt-elements-textSecondary">
-                                  {webAppInfo.gitInfo.github.upstream.forks}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {webAppInfo && (
-              <div className="mt-6">
-                <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Dependencies</h3>
-                <div className="bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] rounded-lg divide-y divide-[#E5E5E5] dark:divide-[#1A1A1A]">
-                  <DependencySection title="Production" deps={webAppInfo.dependencies.production} />
-                  <DependencySection title="Development" deps={webAppInfo.dependencies.development} />
-                  <DependencySection title="Peer" deps={webAppInfo.dependencies.peer} />
-                  <DependencySection title="Optional" deps={webAppInfo.dependencies.optional} />
-                </div>
+          {webAppInfo && (
+            <div className="mt-6">
+              <h3 className="mb-4 text-base font-medium text-bolt-elements-textPrimary">Dependencies</h3>
+              <div className="bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] rounded-lg divide-y divide-[#E5E5E5] dark:divide-[#1A1A1A]">
+                <DependencySection title="Production" deps={webAppInfo.dependencies.production} />
+                <DependencySection title="Development" deps={webAppInfo.dependencies.development} />
+                <DependencySection title="Peer" deps={webAppInfo.dependencies.peer} />
+                <DependencySection title="Optional" deps={webAppInfo.dependencies.optional} />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -1969,29 +1860,22 @@ export default function DebugTab() {
       <Collapsible
         open={openSections.errors}
         onOpenChange={(open) => setOpenSections((prev) => ({ ...prev, errors: open }))}
-        className="w-full"
+        className="collapsible-section"
       >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-6 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:warning text-red-500 w-5 h-5" />
-              <h3 className="text-base font-medium text-bolt-elements-textPrimary">Error Check</h3>
-              {errorLogs.length > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  {errorLogs.length} Errors
-                </Badge>
-              )}
-            </div>
-            <div
-              className={classNames(
-                'i-ph:caret-down w-4 h-4 transform transition-transform duration-200',
-                openSections.errors ? 'rotate-180' : '',
-              )}
-            />
+        <CollapsibleTrigger className="collapsible-section-trigger">
+          <div className="trigger-content">
+            <div className="i-ph:warning section-icon" />
+            <h3 className="section-title">Error Check</h3>
+            {errorLogs.length > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {errorLogs.length} Errors
+              </Badge>
+            )}
           </div>
+          <div className={classNames('i-ph:caret-down caret-icon', openSections.errors ? 'open' : '')} />
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
+        <CollapsibleContent className="collapsible-section-content">
           <div className="p-6 mt-2 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
             <ScrollArea className="h-[300px]">
               <div className="space-y-4">

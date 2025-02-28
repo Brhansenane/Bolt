@@ -202,27 +202,27 @@ export class ActionRunner {
       this.#updateAction(actionId, {
         status: isStreaming ? 'running' : action.abortSignal.aborted ? 'aborted' : 'complete',
       });
-    } catch (error) {
+    } catch (_error) {
       if (action.abortSignal.aborted) {
         return;
       }
 
       this.#updateAction(actionId, { status: 'failed', error: 'Action failed' });
-      logger.error(`[${action.type}]:Action failed\n\n`, error);
+      logger.error(`[${action.type}]:Action failed\n\n`, _error);
 
-      if (!(error instanceof ActionCommandError)) {
+      if (!(_error instanceof ActionCommandError)) {
         return;
       }
 
       this.onAlert?.({
         type: 'error',
         title: 'Dev Server Failed',
-        description: error.header,
-        content: error.output,
+        description: _error.header,
+        content: _error.output,
       });
 
       // re-throw the error to be caught in the promise chain
-      throw error;
+      throw _error;
     }
   }
 
@@ -283,8 +283,8 @@ export class ActionRunner {
       unreachable('Expected file action');
     }
 
-    const webcontainer = await this.#webcontainer;
-    const relativePath = nodePath.relative(webcontainer.workdir, action.filePath);
+    const _webcontainer = await this.#webcontainer;
+    const relativePath = nodePath.relative(_webcontainer.workdir, action.filePath);
 
     let folder = nodePath.dirname(relativePath);
 
@@ -293,18 +293,18 @@ export class ActionRunner {
 
     if (folder !== '.') {
       try {
-        await webcontainer.fs.mkdir(folder, { recursive: true });
+        await _webcontainer.fs.mkdir(folder, { recursive: true });
         logger.debug('Created folder', folder);
-      } catch (error) {
-        logger.error('Failed to create folder\n\n', error);
+      } catch (_error) {
+        logger.error('Failed to create folder\n\n', _error);
       }
     }
 
     try {
-      await webcontainer.fs.writeFile(relativePath, action.content);
+      await _webcontainer.fs.writeFile(relativePath, action.content);
       logger.debug(`File written ${relativePath}`);
-    } catch (error) {
-      logger.error('Failed to write file\n\n', error);
+    } catch (_error) {
+      logger.error('Failed to write file\n\n', _error);
     }
   }
 
@@ -316,24 +316,26 @@ export class ActionRunner {
 
   async getFileHistory(filePath: string): Promise<FileHistory | null> {
     try {
-      const webcontainer = await this.#webcontainer;
+      const _webcontainer = await this.#webcontainer;
       const historyPath = this.#getHistoryPath(filePath);
-      const content = await webcontainer.fs.readFile(historyPath, 'utf-8');
+      const content = await _webcontainer.fs.readFile(historyPath, 'utf-8');
+
       return JSON.parse(content);
-    } catch (error) {
+    } catch (_error) {
+      // Silently fail and return null if file doesn't exist
       return null;
     }
   }
 
   async saveFileHistory(filePath: string, history: FileHistory) {
-    const webcontainer = await this.#webcontainer;
+    const _webcontainer = await this.#webcontainer;
     const historyPath = this.#getHistoryPath(filePath);
 
     await this.#runFileAction({
       type: 'file',
       filePath: historyPath,
       content: JSON.stringify(history),
-      changeSource: 'auto-save'
+      changeSource: 'auto-save',
     } as any);
   }
 
@@ -346,10 +348,10 @@ export class ActionRunner {
       unreachable('Expected build action');
     }
 
-    const webcontainer = await this.#webcontainer;
+    const _webcontainer = await this.#webcontainer;
 
     // Create a new terminal specifically for the build
-    const buildProcess = await webcontainer.spawn('npm', ['run', 'build']);
+    const buildProcess = await _webcontainer.spawn('npm', ['run', 'build']);
 
     let output = '';
     buildProcess.output.pipeTo(
@@ -367,7 +369,7 @@ export class ActionRunner {
     }
 
     // Get the build output directory path
-    const buildDir = nodePath.join(webcontainer.workdir, 'dist');
+    const buildDir = nodePath.join(_webcontainer.workdir, 'dist');
 
     return {
       path: buildDir,

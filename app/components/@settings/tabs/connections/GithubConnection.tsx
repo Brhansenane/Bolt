@@ -65,11 +65,23 @@ interface GitHubConnection {
   stats?: GitHubStats;
 }
 
+// Define LoadingSpinner before it's used
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center p-4">
+      <div className="flex items-center gap-2">
+        <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+        <span className="text-bolt-elements-textSecondary">Loading...</span>
+      </div>
+    </div>
+  );
+}
+
 export function GithubConnection() {
   const [connection, setConnection] = useState<GitHubConnection>({
     user: null,
     token: '',
-    tokenType: 'classic',
+    tokenType: 'fine-grained',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -84,7 +96,7 @@ export function GithubConnection() {
         'https://api.github.com/user/repos?sort=updated&per_page=10&affiliation=owner,organization_member,collaborator',
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `token ${token}`,
           },
         },
       );
@@ -97,7 +109,7 @@ export function GithubConnection() {
 
       const orgsResponse = await fetch('https://api.github.com/user/orgs', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `token ${token}`,
         },
       });
 
@@ -109,7 +121,7 @@ export function GithubConnection() {
 
       const eventsResponse = await fetch('https://api.github.com/users/' + connection.user?.login + '/events/public', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `token ${token}`,
         },
       });
 
@@ -122,7 +134,7 @@ export function GithubConnection() {
       const languagePromises = repos.map((repo) =>
         fetch(repo.languages_url, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `token ${token}`,
           },
         }).then((res) => res.json() as Promise<Record<string, number>>),
       );
@@ -170,11 +182,19 @@ export function GithubConnection() {
         parsed.tokenType = 'classic';
       }
 
+      console.log('GitHub connection loaded:', {
+        username: parsed.user?.login,
+        hasToken: !!parsed.token,
+        hasUser: !!parsed.user,
+      });
+
       setConnection(parsed);
 
       if (parsed.user && parsed.token) {
         fetchGitHubStats(parsed.token);
       }
+    } else {
+      console.log('No GitHub connection found in localStorage');
     }
 
     setIsLoading(false);
@@ -190,7 +210,7 @@ export function GithubConnection() {
 
       const response = await fetch('https://api.github.com/user', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `token ${token}`,
         },
       });
 
@@ -206,6 +226,12 @@ export function GithubConnection() {
       };
 
       localStorage.setItem('github_connection', JSON.stringify(newConnection));
+      console.log('GitHub connection saved:', {
+        username: data.login,
+        hasToken: !!token,
+        tokenType: connection.tokenType,
+      });
+
       setConnection(newConnection);
 
       await fetchGitHubStats(token);
@@ -300,12 +326,38 @@ export function GithubConnection() {
               </a>
               <span className="mx-2">•</span>
               <span>
-                Required scopes:{' '}
+                Required permissions:{' '}
                 {connection.tokenType === 'classic'
                   ? 'repo, read:org, read:user'
-                  : 'Repository access, Organization access'}
+                  : 'Repository access (Contents: Read, Metadata: Read)'}
               </span>
             </div>
+
+            {connection.tokenType === 'fine-grained' && !connection.user && (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-bolt-elements-textSecondary">
+                <h4 className="font-medium mb-1 text-blue-700 dark:text-blue-300">
+                  How to create a Fine-grained token:
+                </h4>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Go to GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens</li>
+                  <li>Click "Generate new token" and give it a descriptive name</li>
+                  <li>Set an expiration date (recommended: 90 days)</li>
+                  <li>Select the repositories you want to access (or "All repositories")</li>
+                  <li>
+                    Under "Repository permissions", set:
+                    <ul className="list-disc pl-4 mt-1">
+                      <li>
+                        <strong>Contents:</strong> Read-only (required for cloning)
+                      </li>
+                      <li>
+                        <strong>Metadata:</strong> Read-only
+                      </li>
+                    </ul>
+                  </li>
+                  <li>Click "Generate token" and copy the token value</li>
+                </ol>
+              </div>
+            )}
           </div>
         </div>
 
@@ -542,16 +594,5 @@ export function GithubConnection() {
         )}
       </div>
     </motion.div>
-  );
-}
-
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center p-4">
-      <div className="flex items-center gap-2">
-        <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
-        <span className="text-bolt-elements-textSecondary">Loading...</span>
-      </div>
-    </div>
   );
 }

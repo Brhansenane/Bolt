@@ -1,0 +1,148 @@
+// Settings component styles
+
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .settings-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .dark & {
+      background-color: #0a0a0a;
+      box-shadow: none;
+    }
+
+    &-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+
+      .header-icon {
+        width: 1rem;
+        height: 1rem;
+        color: #a855f7; // purple-500
+      }
+
+      .header-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--bolt-elements-textPrimary);
+      }
+    }
+
+    .setting-group {
+      margin-bottom: 1rem;
+
+      .setting-label-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+
+        .setting-icon {
+          width: 1rem;
+          height: 1rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+
+        .setting-label {
+          font-size: 0.875rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+      }
+
+      .setting-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .setting-status {
+          font-size: 0.875rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+      }
+
+      .setting-select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        background-color: #fafafa;
+        border: 1px solid #e5e5e5;
+        color: var(--bolt-elements-textPrimary);
+        transition: all 200ms;
+
+        .dark & {
+          background-color: #0a0a0a;
+          border-color: #1a1a1a;
+        }
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+        }
+      }
+    }
+  }
+
+  // Keyboard shortcuts section
+  .shortcuts-section {
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      background-color: #fafafa;
+
+      .dark & {
+        background-color: #1a1a1a;
+      }
+
+      .shortcut-info {
+        display: flex;
+        flex-direction: column;
+
+        .shortcut-name {
+          font-size: 0.875rem;
+          color: var(--bolt-elements-textPrimary);
+        }
+
+        .shortcut-description {
+          font-size: 0.75rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+      }
+
+      .shortcut-keys {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .key {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--bolt-elements-textSecondary);
+          background-color: white;
+          border: 1px solid #e5e5e5;
+          border-radius: 0.25rem;
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+
+          .dark & {
+            background-color: #0a0a0a;
+            border-color: #1a1a1a;
+          }
+        }
+      }
+    }
+  }
+}

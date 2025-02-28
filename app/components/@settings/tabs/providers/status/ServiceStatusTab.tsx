@@ -660,19 +660,6 @@ const ServiceStatusTab = () => {
     [checkApiEndpoint, success, error],
   );
 
-  const getStatusColor = (status: ServiceStatus['status']) => {
-    switch (status) {
-      case 'operational':
-        return 'text-green-500';
-      case 'degraded':
-        return 'text-yellow-500';
-      case 'down':
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
-    }
-  };
-
   const getStatusIcon = (status: ServiceStatus['status']) => {
     switch (status) {
       case 'operational':
@@ -687,66 +674,46 @@ const ServiceStatusTab = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <motion.div
-        className="space-y-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex items-center justify-between gap-2 mt-8 mb-4">
-          <div className="flex items-center gap-2">
-            <div
-              className={classNames(
-                'w-8 h-8 flex items-center justify-center rounded-lg',
-                'bg-bolt-elements-background-depth-3',
-                'text-purple-500',
-              )}
-            >
+    <div className="service-status">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <div className="status-header">
+          <div className="header-content">
+            <div className="header-icon">
               <TbActivityHeartbeat className="w-5 h-5" />
             </div>
-            <div>
-              <h4 className="text-md font-medium text-bolt-elements-textPrimary">Service Status</h4>
-              <p className="text-sm text-bolt-elements-textSecondary">
-                Monitor and test the operational status of cloud LLM providers
-              </p>
+            <div className="header-text">
+              <h4 className="header-title">Service Status</h4>
+              <p className="header-description">Monitor and test the operational status of cloud LLM providers</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-bolt-elements-textSecondary">
-              Last updated: {lastRefresh.toLocaleTimeString()}
-            </span>
+          <div className="header-actions">
+            <span className="last-updated">Last updated: {lastRefresh.toLocaleTimeString()}</span>
             <button
               onClick={() => fetchAllStatuses()}
-              className={classNames(
-                'px-3 py-1.5 rounded-lg text-sm',
-                'bg-bolt-elements-background-depth-3 hover:bg-bolt-elements-background-depth-4',
-                'text-bolt-elements-textPrimary',
-                'transition-all duration-200',
-                'flex items-center gap-2',
-                loading ? 'opacity-50 cursor-not-allowed' : '',
-              )}
+              className={classNames('refresh-button', {
+                disabled: loading,
+              })}
               disabled={loading}
             >
-              <div className={`i-ph:arrows-clockwise w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <div
+                className={classNames('refresh-icon', {
+                  'animate-spin': loading,
+                })}
+              >
+                <div className="i-ph:arrows-clockwise" />
+              </div>
               <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
         </div>
 
-        {/* API Key Test Section */}
-        <div className="p-4 bg-bolt-elements-background-depth-2 rounded-lg">
-          <h5 className="text-sm font-medium text-bolt-elements-textPrimary mb-2">Test API Key</h5>
-          <div className="flex gap-2">
+        <div className="api-test-section">
+          <h5 className="section-title">Test API Key</h5>
+          <div className="test-form">
             <select
               value={testProvider}
               onChange={(e) => setTestProvider(e.target.value as ProviderName)}
-              className={classNames(
-                'flex-1 px-3 py-1.5 rounded-lg text-sm max-w-[200px]',
-                'bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor',
-                'text-bolt-elements-textPrimary',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/30',
-              )}
+              className="provider-select"
             >
               <option value="">Select Provider</option>
               {Object.keys(PROVIDER_STATUS_URLS).map((provider) => (
@@ -760,26 +727,16 @@ const ServiceStatusTab = () => {
               value={testApiKey}
               onChange={(e) => setTestApiKey(e.target.value)}
               placeholder="Enter API key to test"
-              className={classNames(
-                'flex-1 px-3 py-1.5 rounded-lg text-sm',
-                'bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor',
-                'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/30',
-              )}
+              className="api-key-input"
             />
             <button
               onClick={() =>
                 testProvider && testApiKey && testApiKeyForProvider(testProvider as ProviderName, testApiKey)
               }
               disabled={!testProvider || !testApiKey || testingStatus === 'testing'}
-              className={classNames(
-                'px-4 py-1.5 rounded-lg text-sm',
-                'bg-purple-500 hover:bg-purple-600',
-                'text-white',
-                'transition-all duration-200',
-                'flex items-center gap-2',
-                !testProvider || !testApiKey || testingStatus === 'testing' ? 'opacity-50 cursor-not-allowed' : '',
-              )}
+              className={classNames('test-button', {
+                disabled: !testProvider || !testApiKey || testingStatus === 'testing',
+              })}
             >
               {testingStatus === 'testing' ? (
                 <>
@@ -796,72 +753,59 @@ const ServiceStatusTab = () => {
           </div>
         </div>
 
-        {/* Status Grid */}
         {loading && serviceStatuses.length === 0 ? (
-          <div className="text-center py-8 text-bolt-elements-textSecondary">Loading service statuses...</div>
+          <div className="loading-message">Loading service statuses...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="status-grid">
             {serviceStatuses.map((service, index) => (
               <motion.div
                 key={service.provider}
-                className={classNames(
-                  'bg-bolt-elements-background-depth-2',
-                  'hover:bg-bolt-elements-background-depth-3',
-                  'transition-all duration-200',
-                  'relative overflow-hidden rounded-lg',
-                )}
+                className="status-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
               >
                 <div
-                  className={classNames('block p-4', service.statusUrl ? 'cursor-pointer' : '')}
+                  className={classNames('card-content', {
+                    clickable: !!service.statusUrl,
+                  })}
                   onClick={() => service.statusUrl && window.open(service.statusUrl, '_blank')}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                  <div className="card-header">
+                    <div className="provider-info">
                       {service.icon && (
-                        <div
-                          className={classNames(
-                            'w-8 h-8 flex items-center justify-center rounded-lg',
-                            'bg-bolt-elements-background-depth-3',
-                            getStatusColor(service.status),
-                          )}
-                        >
+                        <div className={classNames('provider-icon', service.status)}>
                           {React.createElement(service.icon, {
                             className: 'w-5 h-5',
                           })}
                         </div>
                       )}
-                      <div>
-                        <h4 className="text-sm font-medium text-bolt-elements-textPrimary">{service.provider}</h4>
-                        <div className="space-y-1">
-                          <p className="text-xs text-bolt-elements-textSecondary">
+                      <div className="provider-details">
+                        <h4 className="provider-name">{service.provider}</h4>
+                        <div className="provider-meta">
+                          <p className="check-time">
                             Last checked: {new Date(service.lastChecked).toLocaleTimeString()}
                           </p>
                           {service.responseTime && (
-                            <p className="text-xs text-bolt-elements-textTertiary">
-                              Response time: {Math.round(service.responseTime)}ms
-                            </p>
+                            <p className="response-time">Response time: {Math.round(service.responseTime)}ms</p>
                           )}
-                          {service.message && (
-                            <p className="text-xs text-bolt-elements-textTertiary">{service.message}</p>
-                          )}
+                          {service.message && <p className="status-message">{service.message}</p>}
                         </div>
                       </div>
                     </div>
-                    <div className={classNames('flex items-center gap-2', getStatusColor(service.status))}>
-                      <span className="text-sm capitalize">{service.status}</span>
+                    <div className={classNames('status-indicator', service.status)}>
+                      <span>{service.status}</span>
                       {getStatusIcon(service.status)}
                     </div>
                   </div>
                   {service.incidents && service.incidents.length > 0 && (
-                    <div className="mt-2 border-t border-bolt-elements-borderColor pt-2">
-                      <p className="text-xs font-medium text-bolt-elements-textSecondary mb-1">Recent Incidents:</p>
-                      <ul className="text-xs text-bolt-elements-textTertiary space-y-1">
+                    <div className="incidents-section">
+                      <p className="incidents-title">Recent Incidents:</p>
+                      <ul className="incidents-list">
                         {service.incidents.map((incident, i) => (
-                          <li key={i}>{incident}</li>
+                          <li key={i} className="incident-item">
+                            {incident}
+                          </li>
                         ))}
                       </ul>
                     </div>

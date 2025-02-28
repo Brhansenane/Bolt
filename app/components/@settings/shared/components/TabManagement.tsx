@@ -9,6 +9,7 @@ import type { TabType } from '~/components/@settings/core/types';
 import { toast } from 'react-toastify';
 import { TbLayoutGrid } from 'react-icons/tb';
 import { useSettingsStore } from '~/lib/stores/settings';
+import '~/styles/components/tab-management.scss';
 
 // Define tab icons mapping
 const TAB_ICONS: Record<TabType, string> = {
@@ -49,9 +50,7 @@ const ALL_USER_TABS = [...DEFAULT_USER_TABS, ...OPTIONAL_USER_TABS];
 const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers']);
 
 // Beta label component
-const BetaLabel = () => (
-  <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-500 font-medium">BETA</span>
-);
+const BetaLabel = () => <span className="tab-badge beta-badge">BETA</span>;
 
 export const TabManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,7 +135,7 @@ export const TabManagement = () => {
   }, [setSelectedTab]);
 
   return (
-    <div className="space-y-6">
+    <div className="tab-management-container">
       <motion.div
         className="space-y-4"
         initial={{ opacity: 0, y: 20 }}
@@ -144,53 +143,37 @@ export const TabManagement = () => {
         transition={{ duration: 0.3 }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mt-8 mb-4">
-          <div className="flex items-center gap-2">
-            <div
-              className={classNames(
-                'w-8 h-8 flex items-center justify-center rounded-lg',
-                'bg-bolt-elements-background-depth-3',
-                'text-purple-500',
-              )}
-            >
-              <TbLayoutGrid className="w-5 h-5" />
+        <div className="section-header">
+          <div className="header-left">
+            <div className="header-icon-container">
+              <TbLayoutGrid className="header-icon" />
             </div>
-            <div>
-              <h4 className="text-md font-medium text-bolt-elements-textPrimary">Tab Management</h4>
-              <p className="text-sm text-bolt-elements-textSecondary">Configure visible tabs and their order</p>
+            <div className="header-content">
+              <h4 className="header-title">Tab Management</h4>
+              <p className="header-description">Configure visible tabs and their order</p>
             </div>
           </div>
 
           {/* Search */}
-          <div className="relative w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <div className="i-ph:magnifying-glass w-4 h-4 text-gray-400" />
-            </div>
+          <div className="search-container">
+            <div className="i-ph:magnifying-glass search-icon" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tabs..."
-              className={classNames(
-                'w-full pl-10 pr-4 py-2 rounded-lg',
-                'bg-bolt-elements-background-depth-2',
-                'border border-bolt-elements-borderColor',
-                'text-bolt-elements-textPrimary',
-                'placeholder-bolt-elements-textTertiary',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/30',
-                'transition-all duration-200',
-              )}
+              className="search-input"
             />
           </div>
         </div>
 
         {/* Tab Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="tabs-grid">
           {/* Default Section Header */}
           {filteredTabs.some((tab) => DEFAULT_USER_TABS.includes(tab.id)) && (
-            <div className="col-span-full flex items-center gap-2 mt-4 mb-2">
-              <div className="i-ph:star-fill w-4 h-4 text-purple-500" />
-              <span className="text-sm font-medium text-bolt-elements-textPrimary">Default Tabs</span>
+            <div className="section-divider col-span-full">
+              <div className="i-ph:star-fill divider-icon" />
+              <span className="divider-label">Default Tabs</span>
             </div>
           )}
 
@@ -200,55 +183,36 @@ export const TabManagement = () => {
             .map((tab, index) => (
               <motion.div
                 key={tab.id}
-                className={classNames(
-                  'rounded-lg border bg-bolt-elements-background text-bolt-elements-textPrimary',
-                  'bg-bolt-elements-background-depth-2',
-                  'hover:bg-bolt-elements-background-depth-3',
-                  'transition-all duration-200',
-                  'relative overflow-hidden group',
-                )}
+                className="tab-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
               >
                 {/* Status Badges */}
-                <div className="absolute top-1 right-1.5 flex gap-1">
-                  <span className="px-1.5 py-0.25 text-xs rounded-full bg-purple-500/10 text-purple-500 font-medium mr-2">
-                    Default
-                  </span>
+                <div className="badge-container">
+                  <span className="tab-badge default-badge">Default</span>
+                  {BETA_TABS.has(tab.id) && <BetaLabel />}
                 </div>
 
-                <div className="flex items-start gap-4 p-4">
+                <div className="tab-content">
                   <motion.div
-                    className={classNames(
-                      'w-10 h-10 flex items-center justify-center rounded-xl',
-                      'bg-bolt-elements-background-depth-3 group-hover:bg-bolt-elements-background-depth-4',
-                      'transition-all duration-200',
-                      tab.visible ? 'text-purple-500' : 'text-bolt-elements-textSecondary',
-                    )}
+                    className={classNames('tab-icon-container', tab.visible ? 'enabled' : 'disabled')}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
-                    <div
-                      className={classNames('w-6 h-6', 'transition-transform duration-200', 'group-hover:rotate-12')}
-                    >
+                    <div className="tab-icon">
                       <div className={classNames(TAB_ICONS[tab.id], 'w-full h-full')} />
                     </div>
                   </motion.div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-medium text-bolt-elements-textPrimary group-hover:text-purple-500 transition-colors">
-                            {TAB_LABELS[tab.id]}
-                          </h4>
-                          {BETA_TABS.has(tab.id) && <BetaLabel />}
+                  <div className="tab-details">
+                    <div className="tab-header">
+                      <div className="tab-info">
+                        <div className="tab-name-container">
+                          <h4 className="tab-name">{TAB_LABELS[tab.id]}</h4>
                         </div>
-                        <p className="text-xs text-bolt-elements-textSecondary mt-0.5">
-                          {tab.visible ? 'Visible in user mode' : 'Hidden in user mode'}
-                        </p>
+                        <p className="tab-status">{tab.visible ? 'Visible in user mode' : 'Hidden in user mode'}</p>
                       </div>
                       <Switch
                         checked={tab.visible}
@@ -270,7 +234,7 @@ export const TabManagement = () => {
                 </div>
 
                 <motion.div
-                  className="absolute inset-0 border-2 border-purple-500/0 rounded-lg pointer-events-none"
+                  className={classNames('tab-highlight', tab.visible ? 'enabled' : 'disabled')}
                   animate={{
                     borderColor: tab.visible ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0)',
                     scale: tab.visible ? 1 : 0.98,
@@ -282,9 +246,9 @@ export const TabManagement = () => {
 
           {/* Optional Section Header */}
           {filteredTabs.some((tab) => OPTIONAL_USER_TABS.includes(tab.id)) && (
-            <div className="col-span-full flex items-center gap-2 mt-8 mb-2">
-              <div className="i-ph:plus-circle-fill w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-bolt-elements-textPrimary">Optional Tabs</span>
+            <div className="section-divider col-span-full">
+              <div className="i-ph:plus-circle-fill divider-icon" />
+              <span className="divider-label">Optional Tabs</span>
             </div>
           )}
 
@@ -294,55 +258,36 @@ export const TabManagement = () => {
             .map((tab, index) => (
               <motion.div
                 key={tab.id}
-                className={classNames(
-                  'rounded-lg border bg-bolt-elements-background text-bolt-elements-textPrimary',
-                  'bg-bolt-elements-background-depth-2',
-                  'hover:bg-bolt-elements-background-depth-3',
-                  'transition-all duration-200',
-                  'relative overflow-hidden group',
-                )}
+                className="tab-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
               >
                 {/* Status Badges */}
-                <div className="absolute top-1 right-1.5 flex gap-1">
-                  <span className="px-1.5 py-0.25 text-xs rounded-full bg-blue-500/10 text-blue-500 font-medium mr-2">
-                    Optional
-                  </span>
+                <div className="badge-container">
+                  <span className="tab-badge optional-badge">Optional</span>
+                  {BETA_TABS.has(tab.id) && <BetaLabel />}
                 </div>
 
-                <div className="flex items-start gap-4 p-4">
+                <div className="tab-content">
                   <motion.div
-                    className={classNames(
-                      'w-10 h-10 flex items-center justify-center rounded-xl',
-                      'bg-bolt-elements-background-depth-3 group-hover:bg-bolt-elements-background-depth-4',
-                      'transition-all duration-200',
-                      tab.visible ? 'text-purple-500' : 'text-bolt-elements-textSecondary',
-                    )}
+                    className={classNames('tab-icon-container', tab.visible ? 'enabled' : 'disabled')}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
-                    <div
-                      className={classNames('w-6 h-6', 'transition-transform duration-200', 'group-hover:rotate-12')}
-                    >
+                    <div className="tab-icon">
                       <div className={classNames(TAB_ICONS[tab.id], 'w-full h-full')} />
                     </div>
                   </motion.div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-medium text-bolt-elements-textPrimary group-hover:text-purple-500 transition-colors">
-                            {TAB_LABELS[tab.id]}
-                          </h4>
-                          {BETA_TABS.has(tab.id) && <BetaLabel />}
+                  <div className="tab-details">
+                    <div className="tab-header">
+                      <div className="tab-info">
+                        <div className="tab-name-container">
+                          <h4 className="tab-name">{TAB_LABELS[tab.id]}</h4>
                         </div>
-                        <p className="text-xs text-bolt-elements-textSecondary mt-0.5">
-                          {tab.visible ? 'Visible in user mode' : 'Hidden in user mode'}
-                        </p>
+                        <p className="tab-status">{tab.visible ? 'Visible in user mode' : 'Hidden in user mode'}</p>
                       </div>
                       <Switch
                         checked={tab.visible}
@@ -364,7 +309,7 @@ export const TabManagement = () => {
                 </div>
 
                 <motion.div
-                  className="absolute inset-0 border-2 border-purple-500/0 rounded-lg pointer-events-none"
+                  className={classNames('tab-highlight', tab.visible ? 'enabled' : 'disabled')}
                   animate={{
                     borderColor: tab.visible ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0)',
                     scale: tab.visible ? 1 : 0.98,

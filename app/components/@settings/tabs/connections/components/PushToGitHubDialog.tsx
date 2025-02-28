@@ -11,6 +11,7 @@ import { extractRelativePath } from '~/utils/diff';
 import { formatSize } from '~/utils/formatSize';
 import type { FileMap, File } from '~/lib/stores/files';
 import { Octokit } from '@octokit/rest';
+import '~/styles/components/push-github-dialog.scss';
 
 interface PushToGitHubDialogProps {
   isOpen: boolean;
@@ -59,28 +60,44 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
   }, [isOpen]);
 
   const fetchRecentRepos = async (token: string) => {
-    if (!token) {
+    if (!token || token.trim() === '') {
       logStore.logError('No GitHub token available');
       toast.error('GitHub authentication required');
 
       return;
     }
 
+    // Ensure token is properly formatted
+    const cleanToken = token.trim();
+
     try {
       setIsFetchingRepos(true);
 
-      const response = await fetch(
-        'https://api.github.com/user/repos?sort=updated&per_page=5&type=all&affiliation=owner,organization_member',
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-            Authorization: `Bearer ${token.trim()}`,
-          },
+      // Log token format for debugging (only first few characters)
+      console.log('Using GitHub token format:', {
+        tokenPrefix: cleanToken ? `${cleanToken.substring(0, 4)}...` : 'none',
+        authHeader: `token ${cleanToken}`.substring(0, 10) + '...',
+      });
+
+      // Use a simpler URL with fewer parameters
+      const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=5', {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `token ${cleanToken}`,
         },
-      );
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        // Log detailed error information
+        console.error('GitHub API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          requestUrl: 'https://api.github.com/user/repos?sort=updated&per_page=5',
+          tokenPrefix: cleanToken ? cleanToken.substring(0, 4) : 'none',
+        });
 
         if (response.status === 401) {
           toast.error('GitHub token expired. Please reconnect your account.');
@@ -133,7 +150,12 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
 
     try {
       // Check if repository exists first
-      const octokit = new Octokit({ auth: connection.token });
+      const octokit = new Octokit({
+        auth: connection.token.trim(),
+        request: {
+          timeout: 10000,
+        },
+      });
 
       try {
         await octokit.repos.get({
@@ -192,104 +214,98 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
     return (
       <Dialog.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]" />
-          <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+          <Dialog.Overlay className="github-dialog-overlay" />
+          <div
+            className="github-dialog-container"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'fixed',
+              inset: 0,
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="w-[90vw] md:w-[600px] max-h-[85vh] overflow-y-auto"
+              className="success-dialog"
+              style={{ position: 'relative', maxHeight: '85vh' }}
             >
-              <Dialog.Content className="bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#E5E5E5] dark:border-[#333333] shadow-xl">
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-green-500">
-                      <div className="i-ph:check-circle w-5 h-5" />
-                      <h3 className="text-lg font-medium">Successfully pushed to GitHub</h3>
-                    </div>
-                    <Dialog.Close
-                      onClick={handleClose}
-                      className="p-2 text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
-                    >
-                      <div className="i-ph:x w-5 h-5" />
-                    </Dialog.Close>
+              <Dialog.Content className="success-content">
+                <div className="success-header">
+                  <div className="success-title">
+                    <div className="i-ph:check-circle success-icon" />
+                    <h3>Successfully pushed to GitHub</h3>
                   </div>
+                  <Dialog.Close onClick={handleClose} className="close-button">
+                    <div className="i-ph:x close-icon" />
+                  </Dialog.Close>
+                </div>
 
-                  <div className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 rounded-lg p-3 text-left">
-                    <p className="text-xs text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark mb-2">
-                      Repository URL
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-bolt-elements-background dark:bg-bolt-elements-background-dark px-3 py-2 rounded border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark font-mono">
-                        {createdRepoUrl}
-                      </code>
-                      <motion.button
-                        onClick={() => {
-                          navigator.clipboard.writeText(createdRepoUrl);
-                          toast.success('URL copied to clipboard');
-                        }}
-                        className="p-2 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary dark:text-bolt-elements-textSecondary-dark dark:hover:text-bolt-elements-textPrimary-dark"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <div className="i-ph:copy w-4 h-4" />
-                      </motion.button>
-                    </div>
-                  </div>
-
-                  <div className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 rounded-lg p-3">
-                    <p className="text-xs text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark mb-2">
-                      Pushed Files ({pushedFiles.length})
-                    </p>
-                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                      {pushedFiles.map((file) => (
-                        <div
-                          key={file.path}
-                          className="flex items-center justify-between py-1 text-sm text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark"
-                        >
-                          <span className="font-mono truncate flex-1">{file.path}</span>
-                          <span className="text-xs text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark ml-2">
-                            {formatSize(file.size)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <motion.a
-                      href={createdRepoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 text-sm inline-flex items-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className="i-ph:github-logo w-4 h-4" />
-                      View Repository
-                    </motion.a>
+                <div className="url-section">
+                  <p className="section-label">Repository URL</p>
+                  <div className="url-container">
+                    <code className="url-code">{createdRepoUrl}</code>
                     <motion.button
                       onClick={() => {
                         navigator.clipboard.writeText(createdRepoUrl);
                         toast.success('URL copied to clipboard');
                       }}
-                      className="px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-600 dark:text-gray-400 hover:bg-[#E5E5E5] dark:hover:bg-[#252525] text-sm inline-flex items-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      className="copy-button"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                     >
-                      <div className="i-ph:copy w-4 h-4" />
-                      Copy URL
-                    </motion.button>
-                    <motion.button
-                      onClick={handleClose}
-                      className="px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-600 dark:text-gray-400 hover:bg-[#E5E5E5] dark:hover:bg-[#252525] text-sm"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Close
+                      <div className="i-ph:copy copy-icon" />
                     </motion.button>
                   </div>
+                </div>
+
+                <div className="files-section">
+                  <p className="section-label">Pushed Files ({pushedFiles.length})</p>
+                  <div className="files-list custom-scrollbar">
+                    {pushedFiles.map((file) => (
+                      <div key={file.path} className="file-item">
+                        <span className="file-path">{file.path}</span>
+                        <span className="file-size">{formatSize(file.size)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="action-buttons">
+                  <motion.a
+                    href={createdRepoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="view-button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="i-ph:github-logo button-icon" />
+                    View Repository
+                  </motion.a>
+                  <motion.button
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdRepoUrl);
+                      toast.success('URL copied to clipboard');
+                    }}
+                    className="copy-button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="i-ph:copy button-icon" />
+                    Copy URL
+                  </motion.button>
+                  <motion.button
+                    onClick={handleClose}
+                    className="close-button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
                 </div>
               </Dialog.Content>
             </motion.div>
@@ -303,39 +319,47 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
     return (
       <Dialog.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]" />
-          <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+          <Dialog.Overlay className="github-dialog-overlay" />
+          <div
+            className="github-dialog-container"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'fixed',
+              inset: 0,
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="w-[90vw] md:w-[500px]"
+              className="connection-required-dialog"
+              style={{ position: 'relative' }}
             >
-              <Dialog.Content className="bg-white dark:bg-[#0A0A0A] rounded-lg p-6 border border-[#E5E5E5] dark:border-[#1A1A1A] shadow-xl">
-                <div className="text-center space-y-4">
-                  <motion.div
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="mx-auto w-12 h-12 rounded-xl bg-bolt-elements-background-depth-3 flex items-center justify-center text-purple-500"
-                  >
-                    <div className="i-ph:github-logo w-6 h-6" />
-                  </motion.div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">GitHub Connection Required</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Please connect your GitHub account in Settings {'>'} Connections to push your code to GitHub.
-                  </p>
-                  <motion.button
-                    className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600 inline-flex items-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleClose}
-                  >
-                    <div className="i-ph:x-circle" />
-                    Close
-                  </motion.button>
-                </div>
+              <Dialog.Content>
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="icon-container"
+                >
+                  <div className="i-ph:github-logo github-icon" />
+                </motion.div>
+                <h3 className="title">GitHub Connection Required</h3>
+                <p className="description">
+                  Please connect your GitHub account in Settings {'>'} Connections to push your code to GitHub.
+                </p>
+                <motion.button
+                  className="close-button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleClose}
+                >
+                  <div className="i-ph:x-circle button-icon" />
+                  Close
+                </motion.button>
               </Dialog.Content>
             </motion.div>
           </div>
@@ -347,53 +371,58 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]" />
-        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+        <Dialog.Overlay className="github-dialog-overlay" />
+        <div
+          className="github-dialog-container"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'fixed',
+            inset: 0,
+          }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="w-[90vw] md:w-[500px]"
+            className="push-github-dialog"
+            style={{ position: 'relative', maxHeight: '85vh' }}
           >
-            <Dialog.Content className="bg-white dark:bg-[#0A0A0A] rounded-lg border border-[#E5E5E5] dark:border-[#1A1A1A] shadow-xl">
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
+            <Dialog.Content className="dialog-content">
+              <div className="dialog-header">
+                <div className="header-content">
                   <motion.div
                     initial={{ scale: 0.8 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="w-10 h-10 rounded-xl bg-bolt-elements-background-depth-3 flex items-center justify-center text-purple-500"
+                    className="icon-container"
                   >
-                    <div className="i-ph:git-branch w-5 h-5" />
+                    <div className="i-ph:git-branch" />
                   </motion.div>
-                  <div>
-                    <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
-                      Push to GitHub
-                    </Dialog.Title>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Push your code to a new or existing GitHub repository
-                    </p>
+                  <div className="header-text">
+                    <Dialog.Title className="dialog-title">Push to GitHub</Dialog.Title>
+                    <p className="dialog-subtitle">Push your code to a new or existing GitHub repository</p>
                   </div>
-                  <Dialog.Close
-                    className="ml-auto p-2 text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
-                    onClick={handleClose}
-                  >
-                    <div className="i-ph:x w-5 h-5" />
-                  </Dialog.Close>
                 </div>
+                <Dialog.Close className="dialog-close" onClick={handleClose}>
+                  <div className="i-ph:x close-icon" />
+                </Dialog.Close>
+              </div>
 
-                <div className="flex items-center gap-3 mb-6 p-3 bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 rounded-lg">
-                  <img src={user.avatar_url} alt={user.login} className="w-10 h-10 rounded-full" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name || user.login}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">@{user.login}</p>
+              <div className="dialog-body">
+                <div className="user-profile">
+                  <img src={user.avatar_url} alt={user.login} className="avatar" />
+                  <div className="user-info">
+                    <p className="user-name">{user.name || user.login}</p>
+                    <p className="user-login">@{user.login}</p>
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="repoName" className="text-sm text-gray-600 dark:text-gray-400">
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label htmlFor="repoName" className="form-label">
                       Repository Name
                     </label>
                     <input
@@ -402,59 +431,49 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
                       value={repoName}
                       onChange={(e) => setRepoName(e.target.value)}
                       placeholder="my-awesome-project"
-                      className="w-full px-4 py-2 rounded-lg bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 border border-[#E5E5E5] dark:border-[#1A1A1A] text-gray-900 dark:text-white placeholder-gray-400"
+                      className="form-input"
                       required
                     />
                   </div>
 
                   {recentRepos.length > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-600 dark:text-gray-400">Recent Repositories</label>
-                      <div className="space-y-2">
+                    <div className="recent-repos">
+                      <label className="section-label">Recent Repositories</label>
+                      <div className="repo-list">
                         {recentRepos.map((repo) => (
                           <motion.button
                             key={repo.full_name}
                             type="button"
                             onClick={() => setRepoName(repo.name)}
-                            className="w-full p-3 text-left rounded-lg bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 hover:bg-bolt-elements-background-depth-3 dark:hover:bg-bolt-elements-background-depth-4 transition-colors group"
+                            className="repo-item"
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="i-ph:git-repository w-4 h-4 text-purple-500" />
-                                <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-purple-500">
-                                  {repo.name}
-                                </span>
+                            <div className="repo-header">
+                              <div className="repo-name-container">
+                                <div className="i-ph:git-repository repo-icon" />
+                                <span className="repo-name">{repo.name}</span>
                               </div>
-                              {repo.private && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-500">
-                                  Private
-                                </span>
-                              )}
+                              {repo.private && <span className="repo-privacy">Private</span>}
                             </div>
-                            {repo.description && (
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                                {repo.description}
-                              </p>
-                            )}
-                            <div className="mt-2 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                            {repo.description && <p className="repo-description">{repo.description}</p>}
+                            <div className="repo-meta">
                               {repo.language && (
-                                <span className="flex items-center gap-1">
-                                  <div className="i-ph:code w-3 h-3" />
+                                <span className="meta-item">
+                                  <div className="i-ph:code meta-icon" />
                                   {repo.language}
                                 </span>
                               )}
-                              <span className="flex items-center gap-1">
-                                <div className="i-ph:star w-3 h-3" />
+                              <span className="meta-item">
+                                <div className="i-ph:star meta-icon" />
                                 {repo.stargazers_count.toLocaleString()}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <div className="i-ph:git-fork w-3 h-3" />
+                              <span className="meta-item">
+                                <div className="i-ph:git-fork meta-icon" />
                                 {repo.forks_count.toLocaleString()}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <div className="i-ph:clock w-3 h-3" />
+                              <span className="meta-item">
+                                <div className="i-ph:clock meta-icon" />
                                 {new Date(repo.updated_at).toLocaleDateString()}
                               </span>
                             </div>
@@ -465,30 +484,32 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
                   )}
 
                   {isFetchingRepos && (
-                    <div className="flex items-center justify-center py-4 text-gray-500 dark:text-gray-400">
-                      <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4 mr-2" />
+                    <div className="loading-state">
+                      <div className="i-ph:spinner-gap-bold spinner-icon" />
                       Loading repositories...
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="private"
-                      checked={isPrivate}
-                      onChange={(e) => setIsPrivate(e.target.checked)}
-                      className="rounded border-[#E5E5E5] dark:border-[#1A1A1A] text-purple-500 focus:ring-purple-500 dark:bg-[#0A0A0A]"
-                    />
-                    <label htmlFor="private" className="text-sm text-gray-600 dark:text-gray-400">
-                      Make repository private
-                    </label>
+                  <div className="form-group">
+                    <div className="checkbox-container">
+                      <input
+                        type="checkbox"
+                        id="private"
+                        checked={isPrivate}
+                        onChange={(e) => setIsPrivate(e.target.checked)}
+                        className="checkbox"
+                      />
+                      <label htmlFor="private" className="checkbox-label">
+                        Make repository private
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="pt-4 flex gap-2">
+                  <div className="action-buttons">
                     <motion.button
                       type="button"
                       onClick={handleClose}
-                      className="px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A] text-gray-600 dark:text-gray-400 hover:bg-[#E5E5E5] dark:hover:bg-[#252525] text-sm"
+                      className="cancel-button"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -497,21 +518,18 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      className={classNames(
-                        'flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm inline-flex items-center justify-center gap-2',
-                        isLoading ? 'opacity-50 cursor-not-allowed' : '',
-                      )}
+                      className={classNames('submit-button', isLoading ? 'opacity-50 cursor-not-allowed' : '')}
                       whileHover={!isLoading ? { scale: 1.02 } : {}}
                       whileTap={!isLoading ? { scale: 0.98 } : {}}
                     >
                       {isLoading ? (
                         <>
-                          <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+                          <div className="i-ph:spinner-gap-bold animate-spin button-icon" />
                           Pushing...
                         </>
                       ) : (
                         <>
-                          <div className="i-ph:git-branch w-4 h-4" />
+                          <div className="i-ph:git-branch button-icon" />
                           Push to GitHub
                         </>
                       )}

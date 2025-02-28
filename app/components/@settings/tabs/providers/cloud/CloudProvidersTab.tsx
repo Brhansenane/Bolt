@@ -14,6 +14,7 @@ import { TbBrain, TbCloudComputing } from 'react-icons/tb';
 import { BiCodeBlock, BiChip } from 'react-icons/bi';
 import { FaCloud, FaBrain } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
+import '~/styles/components/cloud-providers.scss';
 
 // Add type for provider names to ensure type safety
 type ProviderName =
@@ -131,77 +132,55 @@ const CloudProvidersTab = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="cloud-providers-container">
       <motion.div
         className="space-y-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex items-center justify-between gap-4 mt-8 mb-4">
-          <div className="flex items-center gap-2">
-            <div
-              className={classNames(
-                'w-8 h-8 flex items-center justify-center rounded-lg',
-                'bg-bolt-elements-background-depth-3',
-                'text-purple-500',
-              )}
-            >
-              <TbCloudComputing className="w-5 h-5" />
+        <div className="section-header">
+          <div className="header-left">
+            <div className="header-icon-container">
+              <TbCloudComputing className="header-icon" />
             </div>
-            <div>
-              <h4 className="text-md font-medium text-bolt-elements-textPrimary">Cloud Providers</h4>
-              <p className="text-sm text-bolt-elements-textSecondary">Connect to cloud-based AI models and services</p>
+            <div className="header-content">
+              <h4 className="header-title">Cloud Providers</h4>
+              <p className="header-description">Connect to cloud-based AI models and services</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-bolt-elements-textSecondary">Enable All Cloud</span>
+          <div className="header-right">
+            <span className="toggle-label">Enable All Cloud</span>
             <Switch checked={categoryEnabled} onCheckedChange={handleToggleCategory} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="providers-grid">
           {filteredProviders.map((provider, index) => (
             <motion.div
               key={provider.name}
-              className={classNames(
-                'rounded-lg border bg-bolt-elements-background text-bolt-elements-textPrimary shadow-sm',
-                'bg-bolt-elements-background-depth-2',
-                'hover:bg-bolt-elements-background-depth-3',
-                'transition-all duration-200',
-                'relative overflow-hidden group',
-                'flex flex-col',
-              )}
+              className="provider-card"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.02 }}
             >
-              <div className="absolute top-0 right-0 p-2 flex gap-1">
+              <div className="badge-container">
                 {URL_CONFIGURABLE_PROVIDERS.includes(provider.name) && (
-                  <motion.span
-                    className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-500 font-medium"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
+                  <motion.span className="configurable-badge" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     Configurable
                   </motion.span>
                 )}
               </div>
 
-              <div className="flex items-start gap-4 p-4">
+              <div className="provider-content">
                 <motion.div
-                  className={classNames(
-                    'w-10 h-10 flex items-center justify-center rounded-xl',
-                    'bg-bolt-elements-background-depth-3 group-hover:bg-bolt-elements-background-depth-4',
-                    'transition-all duration-200',
-                    provider.settings.enabled ? 'text-purple-500' : 'text-bolt-elements-textSecondary',
-                  )}
+                  className={classNames('provider-icon-container', provider.settings.enabled ? 'enabled' : 'disabled')}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <div className={classNames('w-6 h-6', 'transition-transform duration-200', 'group-hover:rotate-12')}>
+                  <div className="provider-icon">
                     {React.createElement(PROVIDER_ICONS[provider.name as ProviderName] || BsRobot, {
                       className: 'w-full h-full',
                       'aria-label': `${provider.name} logo`,
@@ -209,13 +188,11 @@ const CloudProvidersTab = () => {
                   </div>
                 </motion.div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <div>
-                      <h4 className="text-sm font-medium text-bolt-elements-textPrimary group-hover:text-purple-500 transition-colors">
-                        {provider.name}
-                      </h4>
-                      <p className="text-xs text-bolt-elements-textSecondary mt-0.5">
+                <div className="provider-details">
+                  <div className="provider-header">
+                    <div className="provider-info">
+                      <h4 className="provider-name">{provider.name}</h4>
+                      <p className="provider-description">
                         {PROVIDER_DESCRIPTIONS[provider.name as keyof typeof PROVIDER_DESCRIPTIONS] ||
                           (URL_CONFIGURABLE_PROVIDERS.includes(provider.name)
                             ? 'Configure custom endpoint for this provider'
@@ -235,19 +212,13 @@ const CloudProvidersTab = () => {
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="flex items-center gap-2 mt-4">
+                      <div className="url-config">
                         {editingProvider === provider.name ? (
                           <input
                             type="text"
                             defaultValue={provider.settings.baseUrl}
                             placeholder={`Enter ${provider.name} base URL`}
-                            className={classNames(
-                              'flex-1 px-3 py-1.5 rounded-lg text-sm',
-                              'bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor',
-                              'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
-                              'focus:outline-none focus:ring-2 focus:ring-purple-500/30',
-                              'transition-all duration-200',
-                            )}
+                            className="url-input"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleUpdateBaseUrl(provider, e.currentTarget.value);
@@ -259,26 +230,19 @@ const CloudProvidersTab = () => {
                             autoFocus
                           />
                         ) : (
-                          <div
-                            className="flex-1 px-3 py-1.5 rounded-lg text-sm cursor-pointer group/url"
-                            onClick={() => setEditingProvider(provider.name)}
-                          >
-                            <div className="flex items-center gap-2 text-bolt-elements-textSecondary">
-                              <div className="i-ph:link text-sm" />
-                              <span className="group-hover/url:text-purple-500 transition-colors">
-                                {provider.settings.baseUrl || 'Click to set base URL'}
-                              </span>
+                          <div className="url-display" onClick={() => setEditingProvider(provider.name)}>
+                            <div className="url-content">
+                              <div className="i-ph:link url-icon" />
+                              <span className="url-text">{provider.settings.baseUrl || 'Click to set base URL'}</span>
                             </div>
                           </div>
                         )}
                       </div>
 
                       {providerBaseUrlEnvKeys[provider.name]?.baseUrlKey && (
-                        <div className="mt-2 text-xs text-green-500">
-                          <div className="flex items-center gap-1">
-                            <div className="i-ph:info" />
-                            <span>Environment URL set in .env file</span>
-                          </div>
+                        <div className="env-notice">
+                          <div className="i-ph:info info-icon" />
+                          <span>Environment URL set in .env file</span>
                         </div>
                       )}
                     </motion.div>
@@ -287,7 +251,7 @@ const CloudProvidersTab = () => {
               </div>
 
               <motion.div
-                className="absolute inset-0 border-2 border-purple-500/0 rounded-lg pointer-events-none"
+                className={classNames('provider-highlight', provider.settings.enabled ? 'enabled' : 'disabled')}
                 animate={{
                   borderColor: provider.settings.enabled ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0)',
                   scale: provider.settings.enabled ? 1 : 0.98,

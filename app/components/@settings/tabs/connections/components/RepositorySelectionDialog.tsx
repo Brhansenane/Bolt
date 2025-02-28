@@ -7,6 +7,7 @@ import { getLocalStorage } from '~/lib/persistence';
 import { motion } from 'framer-motion';
 import { formatSize } from '~/utils/formatSize';
 import { Input } from '~/components/ui/Input';
+import '~/styles/components/repository-dialog.scss';
 
 interface GitHubTreeResponse {
   tree: Array<{
@@ -40,8 +41,18 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]" />
-        <div className="fixed inset-0 flex items-center justify-center z-[9999]">
+        <Dialog.Overlay className="dialog-overlay" />
+        <div
+          className="dialog-container"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+          }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -49,70 +60,74 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
             transition={{ duration: 0.2 }}
             className="w-[90vw] md:w-[500px]"
           >
-            <Dialog.Content className="bg-white dark:bg-[#1E1E1E] rounded-lg border border-[#E5E5E5] dark:border-[#333333] shadow-xl">
-              <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium text-[#111111] dark:text-white">Repository Overview</h3>
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm text-[#666666] dark:text-[#999999]">Repository Statistics:</p>
-                    <div className="space-y-2 text-sm text-[#111111] dark:text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="i-ph:files text-purple-500 w-4 h-4" />
-                        <span>Total Files: {stats.totalFiles}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="i-ph:database text-purple-500 w-4 h-4" />
-                        <span>Total Size: {formatSize(stats.totalSize)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="i-ph:code text-purple-500 w-4 h-4" />
-                        <span>
-                          Languages:{' '}
-                          {Object.entries(stats.languages)
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, 3)
-                            .map(([lang, size]) => `${lang} (${formatSize(size)})`)
-                            .join(', ')}
-                        </span>
-                      </div>
-                      {stats.hasPackageJson && (
-                        <div className="flex items-center gap-2">
-                          <span className="i-ph:package text-purple-500 w-4 h-4" />
-                          <span>Has package.json</span>
+            <Dialog.Content
+              className="stats-dialog"
+              onEscapeKeyDown={(_e) => {
+                onClose();
+              }}
+              onPointerDownOutside={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <div className="stats-content">
+                <div className="stats-body">
+                  <div>
+                    <h3 className="stats-title">Repository Overview</h3>
+                    <div className="stats-section">
+                      <p className="section-title">Repository Statistics:</p>
+                      <div className="stats-list">
+                        <div className="stats-item">
+                          <span className="i-ph:files stats-icon" />
+                          <span>Total Files: {stats.totalFiles}</span>
                         </div>
-                      )}
-                      {stats.hasDependencies && (
-                        <div className="flex items-center gap-2">
-                          <span className="i-ph:tree-structure text-purple-500 w-4 h-4" />
-                          <span>Has dependencies</span>
+                        <div className="stats-item">
+                          <span className="i-ph:database stats-icon" />
+                          <span>Total Size: {formatSize(stats.totalSize)}</span>
                         </div>
-                      )}
+                        <div className="stats-item">
+                          <span className="i-ph:code stats-icon" />
+                          <span>
+                            Languages:{' '}
+                            {Object.entries(stats.languages)
+                              .sort(([, a], [, b]) => b - a)
+                              .slice(0, 3)
+                              .map(([lang, size]) => `${lang} (${formatSize(size)})`)
+                              .join(', ')}
+                          </span>
+                        </div>
+                        {stats.hasPackageJson && (
+                          <div className="stats-item">
+                            <span className="i-ph:package stats-icon" />
+                            <span>Has package.json</span>
+                          </div>
+                        )}
+                        {stats.hasDependencies && (
+                          <div className="stats-item">
+                            <span className="i-ph:tree-structure stats-icon" />
+                            <span>Has dependencies</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    {isLargeRepo && (
+                      <div className="warning-box">
+                        <span className="i-ph:warning warning-icon" />
+                        <div className="warning-text">
+                          This repository is quite large ({formatSize(stats.totalSize)}). Importing it might take a
+                          while and could impact performance.
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {isLargeRepo && (
-                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-500/10 rounded-lg text-sm flex items-start gap-2">
-                      <span className="i-ph:warning text-yellow-600 dark:text-yellow-500 w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <div className="text-yellow-800 dark:text-yellow-500">
-                        This repository is quite large ({formatSize(stats.totalSize)}). Importing it might take a while
-                        and could impact performance.
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-              <div className="border-t border-[#E5E5E5] dark:border-[#333333] p-4 flex justify-end gap-3 bg-[#F9F9F9] dark:bg-[#252525] rounded-b-lg">
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#333333] text-[#666666] hover:text-[#111111] dark:text-[#999999] dark:hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
-                >
-                  OK
-                </button>
+                <div className="stats-footer">
+                  <button onClick={onClose} className="cancel-button">
+                    Cancel
+                  </button>
+                  <button onClick={onConfirm} className="confirm-button">
+                    Import Repository
+                  </button>
+                </div>
               </div>
             </Dialog.Content>
           </motion.div>
@@ -139,18 +154,39 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
   const [currentStats, setCurrentStats] = useState<RepositoryStats | null>(null);
   const [pendingGitUrl, setPendingGitUrl] = useState<string>('');
 
-  // Fetch user's repositories when dialog opens
+  // Add debugging to log when the dialog opens or closes
   useEffect(() => {
+    console.log('RepositorySelectionDialog isOpen changed:', isOpen);
+
+    // When dialog opens, fetch repositories if needed
     if (isOpen && activeTab === 'my-repos') {
+      console.log('Fetching user repositories...');
       fetchUserRepos();
     }
+
+    // Force a re-render when isOpen changes to ensure the dialog state is updated
+    const forceUpdate = setTimeout(() => {
+      console.log('Force update after isOpen change:', isOpen);
+    }, 50);
+
+    return () => clearTimeout(forceUpdate);
   }, [isOpen, activeTab]);
 
   const fetchUserRepos = async () => {
     const connection = getLocalStorage('github_connection');
+    console.log('GitHub connection in fetchUserRepos:', {
+      exists: !!connection,
+      hasToken: !!connection?.token,
+      hasUser: !!connection?.user,
+    });
 
     if (!connection?.token) {
       toast.error('Please connect your GitHub account first');
+
+      // Show a more helpful message in the UI instead of just a toast
+      setRepositories([]);
+      setIsLoading(false);
+
       return;
     }
 
@@ -159,7 +195,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     try {
       const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&type=all', {
         headers: {
-          Authorization: `Bearer ${connection.token}`,
+          Authorization: `token ${connection.token}`,
         },
       });
 
@@ -210,6 +246,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
         {
           headers: {
             Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${getLocalStorage('github_connection')?.token}`,
           },
         },
       );
@@ -240,7 +277,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     try {
       const response = await fetch(`https://api.github.com/repos/${repo.full_name}/branches`, {
         headers: {
-          Authorization: `Bearer ${getLocalStorage('github_connection')?.token}`,
+          Authorization: `token ${getLocalStorage('github_connection')?.token}`,
         },
       });
 
@@ -290,19 +327,37 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
         .split('/')
         .slice(-2);
 
-      const connection = getLocalStorage('github_connection');
-      const headers: HeadersInit = connection?.token ? { Authorization: `Bearer ${connection.token}` } : {};
+      console.log('Verifying repository:', { owner, repo });
 
-      // Fetch repository tree
-      const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
+      const connection = getLocalStorage('github_connection');
+      const headers: HeadersInit = connection?.token ? { Authorization: `token ${connection.token}` } : {};
+
+      // Try main branch first
+      let treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
         headers,
       });
 
+      // If main branch doesn't exist, try master branch
+      if (!treeResponse.ok && treeResponse.status === 404) {
+        console.log('Main branch not found, trying master branch');
+        treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`, {
+          headers,
+        });
+      }
+
       if (!treeResponse.ok) {
-        throw new Error('Failed to fetch repository structure');
+        console.error('Failed to fetch repository structure:', {
+          status: treeResponse.status,
+          statusText: treeResponse.statusText,
+        });
+        throw new Error(`Failed to fetch repository structure: ${treeResponse.statusText}`);
       }
 
       const treeData = (await treeResponse.json()) as GitHubTreeResponse;
+      console.log('Repository tree data:', {
+        truncated: treeData.tree?.length > 100 ? 'true (showing first 5)' : 'false',
+        sampleFiles: treeData.tree?.slice(0, 5).map((f) => f.path),
+      });
 
       // Calculate repository stats
       let totalSize = 0;
@@ -400,11 +455,15 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
   };
 
   const handleStatsConfirm = () => {
+    console.log('Stats dialog confirmed, importing repository:', pendingGitUrl);
     setShowStatsDialog(false);
 
     if (pendingGitUrl) {
-      onSelect(pendingGitUrl);
-      onClose();
+      // Add a small delay to ensure the stats dialog is fully closed before proceeding
+      setTimeout(() => {
+        onSelect(pendingGitUrl);
+        onClose();
+      }, 100);
     }
   };
 
@@ -421,176 +480,204 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
 
   // Handle dialog close properly
   const handleClose = () => {
+    console.log('handleClose called in RepositorySelectionDialog');
     setIsLoading(false); // Reset loading state
     setSearchQuery(''); // Reset search
     setSearchResults([]); // Reset results
-    onClose();
+
+    // Call the parent's onClose callback
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
     <Dialog.Root
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) {
+        console.log('Dialog onOpenChange:', open);
+
+        /*
+         * Only handle close events from the dialog itself
+         * Don't handle open events to prevent immediate closing
+         */
+        if (isOpen && !open) {
           handleClose();
         }
       }}
+      modal={true}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[90vw] md:w-[600px] max-h-[85vh] overflow-hidden bg-white dark:bg-[#1A1A1A] rounded-xl shadow-xl z-[51] border border-[#E5E5E5] dark:border-[#333333]">
-          <div className="p-4 border-b border-[#E5E5E5] dark:border-[#333333] flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark">
-              Import GitHub Repository
-            </Dialog.Title>
-            <Dialog.Close
-              onClick={handleClose}
-              className={classNames(
-                'p-2 rounded-lg transition-all duration-200 ease-in-out',
-                'text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary',
-                'dark:text-bolt-elements-textTertiary-dark dark:hover:text-bolt-elements-textPrimary-dark',
-                'hover:bg-bolt-elements-background-depth-2 dark:hover:bg-bolt-elements-background-depth-3',
-                'focus:outline-none focus:ring-2 focus:ring-bolt-elements-borderColor dark:focus:ring-bolt-elements-borderColor-dark',
-              )}
-            >
-              <span className="i-ph:x block w-5 h-5" aria-hidden="true" />
-              <span className="sr-only">Close dialog</span>
-            </Dialog.Close>
-          </div>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content
+          className="repository-dialog"
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            maxHeight: '85vh',
+            width: '90vw',
+            maxWidth: '600px',
+            zIndex: 10000,
+          }}
+          onEscapeKeyDown={(_e) => {
+            console.log('Escape key pressed');
+            handleClose();
+          }}
+          onPointerDownOutside={(e) => {
+            // Only prevent closing in specific cases
+            if (showStatsDialog) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            console.log('Interact outside');
 
-          <div className="p-4">
-            <div className="flex gap-2 mb-4">
-              <TabButton active={activeTab === 'my-repos'} onClick={() => setActiveTab('my-repos')}>
-                <span className="i-ph:book-bookmark" />
-                My Repos
-              </TabButton>
-              <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')}>
-                <span className="i-ph:magnifying-glass" />
-                Search
-              </TabButton>
-              <TabButton active={activeTab === 'url'} onClick={() => setActiveTab('url')}>
-                <span className="i-ph:link" />
-                URL
-              </TabButton>
+            // Only prevent interaction in specific cases
+            if (showStatsDialog) {
+              e.preventDefault();
+            }
+          }}
+          aria-describedby="repo-dialog-description"
+        >
+          <div className="dialog-content">
+            <div className="dialog-header">
+              <Dialog.Title className="dialog-title">Import GitHub Repository</Dialog.Title>
+              <button
+                type="button"
+                onClick={(e) => {
+                  console.log('Close button clicked');
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleClose();
+                }}
+                className="dialog-close"
+              >
+                <span className="i-ph:x close-icon" aria-hidden="true" />
+                <span className="sr-only">Close dialog</span>
+              </button>
             </div>
 
-            {activeTab === 'url' ? (
-              <div className="space-y-4">
-                <Input
-                  placeholder="Enter repository URL"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  className={classNames('w-full', {
-                    'border-red-500': false,
-                  })}
-                />
-                <button
-                  onClick={handleImport}
-                  disabled={!customUrl}
-                  className="w-full h-10 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 justify-center"
-                >
-                  Import Repository
-                </button>
+            <div className="dialog-body">
+              <Dialog.Description id="repo-dialog-description" className="sr-only">
+                Browse and select a GitHub repository to clone
+              </Dialog.Description>
+
+              <div className="tab-navigation">
+                <TabButton active={activeTab === 'my-repos'} onClick={() => setActiveTab('my-repos')}>
+                  <span className="i-ph:book-bookmark tab-icon" />
+                  My Repos
+                </TabButton>
+                <TabButton active={activeTab === 'search'} onClick={() => setActiveTab('search')}>
+                  <span className="i-ph:magnifying-glass tab-icon" />
+                  Search
+                </TabButton>
+                <TabButton active={activeTab === 'url'} onClick={() => setActiveTab('url')}>
+                  <span className="i-ph:link tab-icon" />
+                  URL
+                </TabButton>
               </div>
-            ) : (
-              <>
-                {activeTab === 'search' && (
-                  <div className="space-y-4 mb-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Search repositories..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          handleSearch(e.target.value);
-                        }}
-                        className="flex-1 px-4 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333] text-bolt-elements-textPrimary"
-                      />
-                      <button
-                        onClick={() => setFilters({})}
-                        className="px-3 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary"
-                      >
-                        <span className="i-ph:funnel-simple" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Filter by language..."
-                        value={filters.language || ''}
-                        onChange={(e) => {
-                          setFilters({ ...filters, language: e.target.value });
-                          handleSearch(searchQuery);
-                        }}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
-                      />
+
+              {activeTab === 'url' ? (
+                <div className="url-section">
+                  <Input
+                    placeholder="Enter repository URL"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    className="url-input"
+                  />
+                  <button onClick={handleImport} disabled={!customUrl} className="import-button">
+                    Import Repository
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'search' && (
+                    <div className="search-section">
+                      <div className="search-row">
+                        <input
+                          type="text"
+                          placeholder="Search repositories..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            handleSearch(e.target.value);
+                          }}
+                          className="search-input"
+                        />
+                        <button onClick={() => setFilters({})} className="filter-button">
+                          <span className="i-ph:funnel-simple" />
+                        </button>
+                      </div>
+                      <div className="filter-grid">
+                        <input
+                          type="text"
+                          placeholder="Filter by language..."
+                          value={filters.language || ''}
+                          onChange={(e) => {
+                            setFilters({ ...filters, language: e.target.value });
+                            handleSearch(searchQuery);
+                          }}
+                          className="filter-input"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Min stars..."
+                          value={filters.stars || ''}
+                          onChange={(e) => handleFilterChange('stars', e.target.value)}
+                          className="filter-input"
+                        />
+                      </div>
                       <input
                         type="number"
-                        placeholder="Min stars..."
-                        value={filters.stars || ''}
-                        onChange={(e) => handleFilterChange('stars', e.target.value)}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
+                        placeholder="Min forks..."
+                        value={filters.forks || ''}
+                        onChange={(e) => handleFilterChange('forks', e.target.value)}
+                        className="filter-input"
                       />
                     </div>
-                    <input
-                      type="number"
-                      placeholder="Min forks..."
-                      value={filters.forks || ''}
-                      onChange={(e) => handleFilterChange('forks', e.target.value)}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {selectedRepository ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedRepository(null)}
-                          className="p-1.5 rounded-lg hover:bg-[#F5F5F5] dark:hover:bg-[#252525]"
-                        >
-                          <span className="i-ph:arrow-left w-4 h-4" />
-                        </button>
-                        <h3 className="font-medium">{selectedRepository.full_name}</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-bolt-elements-textSecondary">Select Branch</label>
-                        <select
-                          value={selectedBranch}
-                          onChange={(e) => setSelectedBranch(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark focus:outline-none focus:ring-2 focus:ring-bolt-elements-borderColor dark:focus:ring-bolt-elements-borderColor-dark"
-                        >
-                          {branches.map((branch) => (
-                            <option
-                              key={branch.name}
-                              value={branch.name}
-                              className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark"
-                            >
-                              {branch.name} {branch.default ? '(default)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleImport}
-                          className="w-full h-10 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-all duration-200 flex items-center gap-2 justify-center"
-                        >
-                          Import Selected Branch
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <RepositoryList
-                      repos={activeTab === 'my-repos' ? repositories : searchResults}
-                      isLoading={isLoading}
-                      onSelect={handleRepoSelect}
-                      activeTab={activeTab}
-                    />
                   )}
-                </div>
-              </>
-            )}
+
+                  <div className="repository-list">
+                    {selectedRepository ? (
+                      <div className="branch-selection">
+                        <div className="branch-header">
+                          <button onClick={() => setSelectedRepository(null)} className="back-button">
+                            <span className="i-ph:arrow-left back-icon" />
+                          </button>
+                          <h3 className="repo-title">{selectedRepository.full_name}</h3>
+                        </div>
+                        <div className="branch-form">
+                          <label className="branch-label">Select Branch</label>
+                          <select
+                            value={selectedBranch}
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                            className="branch-select"
+                          >
+                            {branches.map((branch) => (
+                              <option key={branch.name} value={branch.name} className="branch-option">
+                                {branch.name} {branch.default ? '(default)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <button onClick={handleImport} className="import-button">
+                            Import Selected Branch
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <RepositoryList
+                        repos={activeTab === 'my-repos' ? repositories : searchResults}
+                        isLoading={isLoading}
+                        onSelect={handleRepoSelect}
+                        activeTab={activeTab}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -609,15 +696,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      onClick={onClick}
-      className={classNames(
-        'px-4 py-2 h-10 rounded-lg transition-all duration-200 flex items-center gap-2 min-w-[120px] justify-center',
-        active
-          ? 'bg-purple-500 text-white hover:bg-purple-600'
-          : 'bg-[#F5F5F5] dark:bg-[#252525] text-bolt-elements-textPrimary dark:text-white hover:bg-[#E5E5E5] dark:hover:bg-[#333333] border border-[#E5E5E5] dark:border-[#333333]',
-      )}
-    >
+    <button onClick={onClick} className={classNames('tab-button', active ? 'active' : 'inactive')}>
       {children}
     </button>
   );
@@ -634,19 +713,41 @@ function RepositoryList({
   onSelect: (repo: GitHubRepoInfo) => void;
   activeTab: string;
 }) {
+  const connection = getLocalStorage('github_connection');
+  const hasGitHubConnection = !!connection?.token && !!connection?.user;
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8 text-bolt-elements-textSecondary">
-        <span className="i-ph:spinner animate-spin mr-2" />
+      <div className="loading-state">
+        <span className="i-ph:spinner spinner-icon" />
         Loading repositories...
+      </div>
+    );
+  }
+
+  if (!hasGitHubConnection && activeTab === 'my-repos') {
+    return (
+      <div className="empty-state">
+        <span className="i-ph:github-logo empty-icon" />
+        <p className="mb-2">GitHub connection required</p>
+        <p className="text-xs text-bolt-elements-textSecondary mb-3">
+          To access your repositories, you need to connect your GitHub account first.
+        </p>
+        <a
+          href="/settings/connections"
+          className="px-3 py-1.5 text-xs bg-purple-500 text-white rounded-md inline-flex items-center gap-1 hover:bg-purple-600 transition-colors"
+        >
+          <span className="i-ph:plug-charging w-3.5 h-3.5" />
+          Connect GitHub Account
+        </a>
       </div>
     );
   }
 
   if (repos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-bolt-elements-textSecondary">
-        <span className="i-ph:folder-simple-dashed w-12 h-12 mb-2 opacity-50" />
+      <div className="empty-state">
+        <span className="i-ph:folder-simple-dashed empty-icon" />
         <p>{activeTab === 'my-repos' ? 'No repositories found' : 'Search for repositories'}</p>
       </div>
     );
@@ -657,34 +758,31 @@ function RepositoryList({
 
 function RepositoryCard({ repo, onSelect }: { repo: GitHubRepoInfo; onSelect: () => void }) {
   return (
-    <div className="p-4 rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333] hover:border-purple-500/50 transition-colors">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="i-ph:git-repository text-bolt-elements-textTertiary" />
-          <h3 className="font-medium text-bolt-elements-textPrimary dark:text-white">{repo.name}</h3>
+    <div className="repository-card">
+      <div className="card-header">
+        <div className="repo-info">
+          <span className="i-ph:git-repository repo-icon" />
+          <h3 className="repo-name">{repo.name}</h3>
         </div>
-        <button
-          onClick={onSelect}
-          className="px-4 py-2 h-10 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-all duration-200 flex items-center gap-2 min-w-[120px] justify-center"
-        >
-          <span className="i-ph:download-simple w-4 h-4" />
+        <button onClick={onSelect} className="import-button">
+          <span className="i-ph:download-simple import-icon" />
           Import
         </button>
       </div>
-      {repo.description && <p className="text-sm text-bolt-elements-textSecondary mb-3">{repo.description}</p>}
-      <div className="flex items-center gap-4 text-sm text-bolt-elements-textTertiary">
+      {repo.description && <p className="repo-description">{repo.description}</p>}
+      <div className="repo-meta">
         {repo.language && (
-          <span className="flex items-center gap-1">
-            <span className="i-ph:code" />
+          <span className="meta-item">
+            <span className="i-ph:code meta-icon" />
             {repo.language}
           </span>
         )}
-        <span className="flex items-center gap-1">
-          <span className="i-ph:star" />
+        <span className="meta-item">
+          <span className="i-ph:star meta-icon" />
           {repo.stargazers_count.toLocaleString()}
         </span>
-        <span className="flex items-center gap-1">
-          <span className="i-ph:clock" />
+        <span className="meta-item">
+          <span className="i-ph:clock meta-icon" />
           {new Date(repo.updated_at).toLocaleDateString()}
         </span>
       </div>

@@ -1,0 +1,255 @@
+// Connections tab component styles
+
+.connections-container {
+  @apply flex flex-col gap-6;
+
+  // Header section
+  .connections-header {
+    @apply flex items-center gap-3;
+
+    .header-icon {
+      @apply w-6 h-6 text-purple-500;
+    }
+
+    .header-title {
+      @apply text-xl font-semibold text-bolt-elements-textPrimary;
+    }
+  }
+
+  .header-description {
+    @apply text-sm text-bolt-elements-textSecondary -mt-4 mb-2;
+  }
+
+  .section-header {
+    @apply mb-4;
+
+    .section-title {
+      @apply text-lg font-medium text-bolt-elements-textPrimary mb-1;
+    }
+
+    .section-description {
+      @apply text-sm text-bolt-elements-textSecondary;
+    }
+  }
+
+  // Connections grid
+  .connections-grid {
+    @apply grid grid-cols-1 gap-6;
+  }
+
+  // Connection card
+  .connection-card {
+    background-color: var(--bolt-elements-background-depth-2);
+    border: 1px solid var(--bolt-elements-borderColor);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: all 200ms;
+
+    &:hover {
+      border-color: rgba(168, 85, 247, 0.3);
+      background-color: var(--bolt-elements-background-depth-3);
+    }
+
+    // Card header
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+
+      .service-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .service-icon {
+          width: 2.5rem;
+          height: 2.5rem;
+          color: var(--bolt-elements-textPrimary);
+        }
+
+        .service-details {
+          .service-name {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--bolt-elements-textPrimary);
+          }
+
+          .service-description {
+            font-size: 0.875rem;
+            color: var(--bolt-elements-textSecondary);
+            margin-top: 0.25rem;
+          }
+        }
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+
+        &.connected {
+          background-color: rgba(16, 185, 129, 0.1);
+          color: #10b981; // green-500
+        }
+
+        &.disconnected {
+          background-color: rgba(239, 68, 68, 0.1);
+          color: #ef4444; // red-500
+        }
+
+        .status-icon {
+          width: 0.75rem;
+          height: 0.75rem;
+        }
+      }
+    }
+
+    // Card content
+    .card-content {
+      margin-top: 1rem;
+
+      .content-section {
+        margin-bottom: 1.5rem;
+
+        .section-title {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--bolt-elements-textPrimary);
+          margin-bottom: 0.5rem;
+        }
+
+        .section-description {
+          font-size: 0.875rem;
+          color: var(--bolt-elements-textSecondary);
+          margin-bottom: 1rem;
+        }
+      }
+
+      // Form elements
+      .form-group {
+        margin-bottom: 1rem;
+
+        .form-label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--bolt-elements-textPrimary);
+          margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 0.625rem 0.75rem;
+          border-radius: 0.375rem;
+          background-color: var(--bolt-elements-background-depth-3);
+          border: 1px solid var(--bolt-elements-borderColor);
+          color: var(--bolt-elements-textPrimary);
+          font-size: 0.875rem;
+          transition: all 200ms;
+
+          &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+            border-color: rgba(168, 85, 247, 0.5);
+          }
+
+          &::placeholder {
+            color: var(--bolt-elements-textTertiary);
+          }
+
+          &.error {
+            border-color: #ef4444; // red-500
+          }
+        }
+
+        .form-error {
+          font-size: 0.75rem;
+          color: #ef4444; // red-500
+          margin-top: 0.25rem;
+        }
+
+        .form-help {
+          font-size: 0.75rem;
+          color: var(--bolt-elements-textSecondary);
+          margin-top: 0.25rem;
+        }
+      }
+    }
+
+    // Card actions
+    .card-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+
+      .action-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 200ms;
+
+        &:active {
+          transform: scale(0.98);
+        }
+
+        &.primary {
+          background-color: #a855f7; // purple-500
+          color: white;
+
+          &:hover {
+            background-color: #9333ea; // purple-600
+          }
+        }
+
+        &.secondary {
+          background-color: var(--bolt-elements-background-depth-3);
+          color: var(--bolt-elements-textPrimary);
+          border: 1px solid var(--bolt-elements-borderColor);
+
+          &:hover {
+            background-color: var(--bolt-elements-background-depth-4);
+          }
+        }
+
+        &.danger {
+          background-color: rgba(239, 68, 68, 0.1);
+          color: #ef4444; // red-500
+
+          &:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+          }
+        }
+
+        .button-icon {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        .spinner {
+          width: 1rem;
+          height: 1rem;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
+  }
+}

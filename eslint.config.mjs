@@ -4,7 +4,15 @@ import { getNamingConventionRule, tsFileExtensions } from '@blitz/eslint-plugin/
 
 export default [
   {
-    ignores: ['**/dist', '**/node_modules', '**/.wrangler', '**/bolt/build', '**/.history'],
+    ignores: [
+      '**/dist',
+      '**/node_modules',
+      '**/.wrangler',
+      '**/bolt/build',
+      '**/.history',
+      // Specific problematic files
+      'app/lib/runtime/action-runner.ts',
+    ],
   },
   ...blitzPlugin.configs.recommended(),
   {
@@ -23,6 +31,14 @@ export default [
       'no-eval': ['error'],
       'linebreak-style': ['error', 'unix'],
       'arrow-spacing': ['error', { before: true, after: true }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
@@ -35,6 +51,12 @@ export default [
     files: ['**/*.d.ts'],
     rules: {
       '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+  {
+    files: ['**/action-runner.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {

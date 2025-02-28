@@ -4,6 +4,14 @@ import type { IProviderSetting } from '~/types/model';
 import type { LanguageModelV1 } from 'ai';
 import { ollama } from 'ollama-ai-provider';
 import { logger } from '~/utils/logger';
+import { LLMManager } from '~/lib/modules/llm/manager';
+
+// Extend the Env interface to include our VITE_ environment variable
+declare global {
+  interface Env {
+    VITE_OLLAMA_API_BASE_URL?: string;
+  }
+}
 
 interface OllamaModelDetails {
   parent_model: string;
@@ -37,6 +45,7 @@ export default class OllamaProvider extends BaseProvider {
 
   config = {
     baseUrlKey: 'OLLAMA_API_BASE_URL',
+    alternativeBaseUrlKey: 'VITE_OLLAMA_API_BASE_URL',
   };
 
   staticModels: ModelInfo[] = [];
@@ -53,6 +62,24 @@ export default class OllamaProvider extends BaseProvider {
       defaultBaseUrlKey: 'OLLAMA_API_BASE_URL',
       defaultApiTokenKey: '',
     });
+
+    // Check for alternative environment variable if baseUrl is not found
+    if (!baseUrl && this.config.alternativeBaseUrlKey) {
+      const manager = LLMManager.getInstance();
+      const altKey = this.config.alternativeBaseUrlKey;
+
+      // Try to get the URL from various environment sources
+      const altBaseUrl =
+        serverEnv?.[altKey] || process?.env?.[altKey] || (manager.env as Record<string, string | undefined>)?.[altKey];
+
+      if (altBaseUrl) {
+        baseUrl = altBaseUrl;
+
+        if (baseUrl.endsWith('/')) {
+          baseUrl = baseUrl.slice(0, -1);
+        }
+      }
+    }
 
     if (!baseUrl) {
       throw new Error('No baseUrl found for OLLAMA provider');
@@ -95,6 +122,41 @@ export default class OllamaProvider extends BaseProvider {
       defaultBaseUrlKey: 'OLLAMA_API_BASE_URL',
       defaultApiTokenKey: '',
     });
+
+    // Check for alternative environment variable if baseUrl is not found
+    if (!baseUrl && this.config.alternativeBaseUrlKey) {
+      const manager = LLMManager.getInstance();
+      const altKey = this.config.alternativeBaseUrlKey;
+
+      // Try to get the URL from various environment sources
+      let altBaseUrl: string | undefined;
+
+      // Handle serverEnv safely
+      if (serverEnv && typeof serverEnv === 'object') {
+        // Check if VITE_OLLAMA_API_BASE_URL exists in serverEnv
+        if (altKey in serverEnv) {
+          altBaseUrl = (serverEnv as any)[altKey];
+        }
+      }
+
+      // If not found in serverEnv, try process.env
+      if (!altBaseUrl) {
+        altBaseUrl = process?.env?.[altKey];
+      }
+
+      // If still not found, try manager.env
+      if (!altBaseUrl && manager.env) {
+        altBaseUrl = (manager.env as any)[altKey];
+      }
+
+      if (altBaseUrl) {
+        baseUrl = altBaseUrl;
+
+        if (baseUrl.endsWith('/')) {
+          baseUrl = baseUrl.slice(0, -1);
+        }
+      }
+    }
 
     // Backend: Check if we're running in Docker
     if (!baseUrl) {

@@ -1,0 +1,564 @@
+// Debug tab component styles
+
+.debug-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem;
+
+  // Quick stats grid
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    // Stats card
+    .stats-card {
+      padding: 1rem;
+      border-radius: 0.75rem;
+      background-color: var(--bolt-elements-background-depth-2);
+      border: 1px solid var(--bolt-elements-borderColor);
+      transition: all 200ms;
+      height: 180px;
+      display: flex;
+      flex-direction: column;
+
+      &:hover {
+        border-color: rgba(168, 85, 247, 0.3);
+      }
+
+      &-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .stats-icon {
+          width: 1rem;
+          height: 1rem;
+          color: #a855f7; // purple-500
+        }
+
+        .stats-label {
+          font-size: 0.875rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+      }
+
+      &-value {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+
+        .value-text {
+          font-size: 1.5rem;
+          font-weight: 600;
+
+          &.success {
+            color: #10b981; // green-500
+          }
+
+          &.warning {
+            color: #f59e0b; // yellow-500
+          }
+
+          &.error {
+            color: #ef4444; // red-500
+          }
+        }
+      }
+
+      &-meta {
+        font-size: 0.75rem;
+        color: var(--bolt-elements-textSecondary);
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+
+        .meta-icon {
+          width: 0.875rem;
+          height: 0.875rem;
+        }
+
+        &.success {
+          .meta-icon {
+            color: #10b981; // green-500
+          }
+        }
+
+        &.warning {
+          .meta-icon {
+            color: #f59e0b; // yellow-500
+          }
+        }
+
+        &.error {
+          .meta-icon {
+            color: #ef4444; // red-500
+          }
+        }
+      }
+    }
+
+    // Service card (spans all columns)
+    .service-card {
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      background-color: var(--bolt-elements-background-depth-2);
+      border: 1px solid var(--bolt-elements-borderColor);
+      transition: all 200ms;
+      height: 260px;
+      display: flex;
+      flex-direction: column;
+
+      @media (min-width: 768px) {
+        grid-column: span 4;
+      }
+
+      &:hover {
+        border-color: rgba(168, 85, 247, 0.3);
+      }
+
+      &-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
+          .service-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #a855f7; // purple-500
+          }
+
+          .service-info {
+            .service-title {
+              font-size: 1rem;
+              font-weight: 500;
+              color: var(--bolt-elements-textPrimary);
+            }
+
+            .service-description {
+              font-size: 0.75rem;
+              color: var(--bolt-elements-textSecondary);
+              margin-top: 0.125rem;
+            }
+          }
+        }
+
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
+          .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 0.625rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            background-color: var(--bolt-elements-background-depth-3);
+
+            .status-indicator {
+              width: 0.5rem;
+              height: 0.5rem;
+              border-radius: 9999px;
+              animation: pulse 2s infinite;
+
+              &.running {
+                background-color: #10b981; // green-500
+                box-shadow: 0 0 0.5rem rgba(16, 185, 129, 0.2);
+              }
+
+              &.not-running {
+                background-color: #ef4444; // red-500
+                box-shadow: 0 0 0.5rem rgba(239, 68, 68, 0.2);
+              }
+            }
+
+            .status-text {
+              font-size: 0.75rem;
+              font-weight: 500;
+
+              &.running {
+                color: #10b981; // green-500
+              }
+
+              &.not-running {
+                color: #ef4444; // red-500
+              }
+            }
+          }
+
+          .timestamp {
+            font-size: 0.625rem;
+            color: var(--bolt-elements-textTertiary);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+
+            .clock-icon {
+              width: 0.75rem;
+              height: 0.75rem;
+            }
+          }
+        }
+      }
+
+      &-content {
+        margin-top: 1.5rem;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+
+        .models-header {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: var(--bolt-elements-textSecondary);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+
+          .models-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            .models-icon {
+              width: 1rem;
+              height: 1rem;
+              color: #a855f7; // purple-500
+            }
+          }
+        }
+
+        .models-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.75rem;
+          overflow-y: auto;
+          padding-right: 0.5rem;
+
+          .model-item {
+            font-size: 0.875rem;
+            background-color: var(--bolt-elements-background-depth-3);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 200ms;
+
+            &:hover {
+              background-color: var(--bolt-elements-background-depth-4);
+            }
+
+            .model-name {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              color: var(--bolt-elements-textSecondary);
+              font-family: monospace;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+
+              .model-icon {
+                width: 1rem;
+                height: 1rem;
+                color: rgba(168, 85, 247, 0.7);
+                transition: color 200ms;
+
+                .model-item:hover & {
+                  color: #a855f7; // purple-500
+                }
+              }
+            }
+
+            .model-size {
+              font-family: monospace;
+              font-size: 0.75rem;
+            }
+          }
+        }
+
+        .empty-state {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          .empty-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 280px;
+            text-align: center;
+
+            .empty-icon {
+              width: 3rem;
+              height: 3rem;
+
+              &.warning {
+                color: rgba(239, 68, 68, 0.8); // red-500 with opacity
+              }
+
+              &.info {
+                color: rgba(168, 85, 247, 0.8); // purple-500 with opacity
+              }
+            }
+
+            .empty-message {
+              font-size: 0.875rem;
+              color: var(--bolt-elements-textSecondary);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Action buttons
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    .action-button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      background-color: var(--bolt-elements-background-depth-2);
+      border: 1px solid var(--bolt-elements-borderColor);
+      color: var(--bolt-elements-textPrimary);
+      transition: all 200ms;
+
+      &:hover {
+        background-color: rgba(168, 85, 247, 0.1);
+        border-color: rgba(168, 85, 247, 0.3);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .button-icon {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      .spinner {
+        width: 1rem;
+        height: 1rem;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+  }
+
+  // Collapsible sections
+  .collapsible-section {
+    width: 100%;
+
+    &-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      background-color: var(--bolt-elements-background-depth-2);
+      border: 1px solid var(--bolt-elements-borderColor);
+
+      .trigger-content {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .section-icon {
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        .section-title {
+          font-size: 1rem;
+          font-weight: 500;
+          color: var(--bolt-elements-textPrimary);
+        }
+      }
+
+      .caret-icon {
+        width: 1rem;
+        height: 1rem;
+        transform: rotate(0deg);
+        transition: transform 200ms;
+
+        &.open {
+          transform: rotate(180deg);
+        }
+      }
+    }
+
+    &-content {
+      padding: 1.5rem;
+      margin-top: 0.5rem;
+      border-radius: 0.75rem;
+      background-color: var(--bolt-elements-background-depth-2);
+      border: 1px solid var(--bolt-elements-borderColor);
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+
+        @media (min-width: 768px) {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .info-item {
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .item-icon {
+          width: 1rem;
+          height: 1rem;
+          color: var(--bolt-elements-textSecondary);
+        }
+
+        .item-label {
+          color: var(--bolt-elements-textSecondary);
+        }
+
+        .item-value {
+          color: var(--bolt-elements-textPrimary);
+        }
+      }
+
+      .dependency-section {
+        margin-top: 1.5rem;
+
+        .dependency-title {
+          font-size: 1rem;
+          font-weight: 500;
+          color: var(--bolt-elements-textPrimary);
+          margin-bottom: 1rem;
+        }
+
+        .dependency-list {
+          background-color: var(--bolt-elements-background-depth-2);
+          border: 1px solid var(--bolt-elements-borderColor);
+          border-radius: 0.5rem;
+          overflow: hidden;
+        }
+      }
+    }
+  }
+
+  // Export dialog
+  .export-dialog {
+    .export-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--bolt-elements-textPrimary);
+
+      .export-icon {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+
+    .export-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+
+      .export-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        background-color: var(--bolt-elements-background-depth-2);
+        border: 1px solid var(--bolt-elements-borderColor);
+        text-align: left;
+        width: 100%;
+        transition: all 200ms;
+
+        &:hover {
+          background-color: rgba(168, 85, 247, 0.1);
+          border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .option-icon {
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+
+        .option-content {
+          .option-title {
+            font-weight: 500;
+            color: var(--bolt-elements-textPrimary);
+          }
+
+          .option-description {
+            font-size: 0.75rem;
+            color: var(--bolt-elements-textSecondary);
+            margin-top: 0.125rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Pulse animation for status indicators
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}

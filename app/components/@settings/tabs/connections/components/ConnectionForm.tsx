@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { classNames } from '~/utils/classNames';
 import type { GitHubAuthState } from '~/components/@settings/tabs/connections/types/GitHub';
 import Cookies from 'js-cookie';
 import { getLocalStorage } from '~/lib/persistence';
+import '~/styles/components/connection-form.scss';
 
-const GITHUB_TOKEN_KEY = 'github_token';
+const GITHUB_CONNECTION_KEY = 'github_connection';
 
 interface ConnectionFormProps {
   authState: GitHubAuthState;
@@ -16,41 +16,61 @@ interface ConnectionFormProps {
 export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }: ConnectionFormProps) {
   // Check for saved token on mount
   useEffect(() => {
-    const savedToken = Cookies.get(GITHUB_TOKEN_KEY) || getLocalStorage(GITHUB_TOKEN_KEY);
+    // Try to get the connection from localStorage first
+    const savedConnection = getLocalStorage(GITHUB_CONNECTION_KEY);
 
-    if (savedToken && !authState.tokenInfo?.token) {
+    if (savedConnection?.token && !authState.tokenInfo?.token) {
       setAuthState((prev: GitHubAuthState) => ({
         ...prev,
         tokenInfo: {
-          token: savedToken,
+          token: savedConnection.token,
           scope: [],
-          avatar_url: '',
-          name: null,
+          avatar_url: savedConnection.user?.avatar_url || '',
+          name: savedConnection.user?.name || null,
           created_at: new Date().toISOString(),
-          followers: 0,
+          followers: savedConnection.user?.followers || 0,
         },
+        username: savedConnection.user?.login || '',
+        isConnected: !!savedConnection.user,
       }));
+    } else {
+      // Fallback to the old cookie method
+      const savedToken = Cookies.get('github_token');
+
+      if (savedToken && !authState.tokenInfo?.token) {
+        setAuthState((prev: GitHubAuthState) => ({
+          ...prev,
+          tokenInfo: {
+            token: savedToken,
+            scope: [],
+            avatar_url: '',
+            name: null,
+            created_at: new Date().toISOString(),
+            followers: 0,
+          },
+        }));
+      }
     }
   }, []);
 
   return (
-    <div className="rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A] border border-[#E5E5E5] dark:border-[#1A1A1A]">
-              <div className="i-ph:plug-fill text-bolt-elements-textTertiary" />
+    <div className="connection-form">
+      <div className="form-container">
+        <div className="form-header">
+          <div className="header-left">
+            <div className="icon-container">
+              <div className="i-ph:plug-fill header-icon" />
             </div>
-            <div>
-              <h3 className="text-lg font-medium text-bolt-elements-textPrimary">Connection Settings</h3>
-              <p className="text-sm text-bolt-elements-textSecondary">Configure your GitHub connection</p>
+            <div className="header-content">
+              <h3 className="header-title">Connection Settings</h3>
+              <p className="header-description">Configure your GitHub connection</p>
             </div>
           </div>
         </div>
 
-        <form onSubmit={onSave} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-bolt-elements-textSecondary mb-2">
+        <form onSubmit={onSave} className="form-fields">
+          <div className="form-group">
+            <label htmlFor="username" className="form-label">
               GitHub Username
             </label>
             <input
@@ -58,34 +78,24 @@ export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }
               type="text"
               value={authState.username}
               onChange={(e) => setAuthState((prev: GitHubAuthState) => ({ ...prev, username: e.target.value }))}
-              className={classNames(
-                'w-full px-4 py-2.5 bg-[#F5F5F5] dark:bg-[#1A1A1A] border rounded-lg',
-                'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary text-base',
-                'border-[#E5E5E5] dark:border-[#1A1A1A]',
-                'focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500',
-                'transition-all duration-200',
-              )}
+              className="form-input"
               placeholder="e.g., octocat"
             />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="token" className="block text-sm font-medium text-bolt-elements-textSecondary">
+          <div className="form-group">
+            <div className="form-label-container">
+              <label htmlFor="token" className="form-label">
                 Personal Access Token
               </label>
               <a
                 href="https://github.com/settings/tokens/new?scopes=repo,user,read:org,workflow,delete_repo,write:packages,read:packages"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={classNames(
-                  'inline-flex items-center gap-1.5 text-xs',
-                  'text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300',
-                  'transition-colors duration-200',
-                )}
+                className="form-link"
               >
                 <span>Generate new token</span>
-                <div className="i-ph:plus-circle" />
+                <div className="i-ph:plus-circle link-icon" />
               </a>
             </div>
             <input
@@ -109,66 +119,47 @@ export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }
                   isLoadingRepos: false,
                 }))
               }
-              className={classNames(
-                'w-full px-4 py-2.5 bg-[#F5F5F5] dark:bg-[#1A1A1A] border rounded-lg',
-                'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary text-base',
-                'border-[#E5E5E5] dark:border-[#1A1A1A]',
-                'focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500',
-                'transition-all duration-200',
-              )}
+              className="form-input"
               placeholder="ghp_xxxxxxxxxxxx"
             />
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-[#E5E5E5] dark:border-[#1A1A1A]">
-            <div className="flex items-center gap-4">
+          <div className="form-footer">
+            <div className="footer-actions">
               {!authState.isConnected ? (
                 <button
                   type="submit"
                   disabled={authState.isVerifying || !authState.username || !authState.tokenInfo?.token}
-                  className={classNames(
-                    'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                    'bg-purple-500 hover:bg-purple-600',
-                    'text-white',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                  )}
+                  className="connect-button"
                 >
                   {authState.isVerifying ? (
                     <>
-                      <div className="i-ph:spinner animate-spin" />
+                      <div className="i-ph:spinner spinner" />
                       <span>Verifying...</span>
                     </>
                   ) : (
                     <>
-                      <div className="i-ph:plug-fill" />
+                      <div className="i-ph:plug-fill button-icon" />
                       <span>Connect</span>
                     </>
                   )}
                 </button>
               ) : (
                 <>
-                  <button
-                    onClick={onDisconnect}
-                    className={classNames(
-                      'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-                      'bg-[#F5F5F5] hover:bg-red-500/10 hover:text-red-500',
-                      'dark:bg-[#1A1A1A] dark:hover:bg-red-500/20 dark:hover:text-red-500',
-                      'text-bolt-elements-textPrimary',
-                    )}
-                  >
-                    <div className="i-ph:plug-fill" />
+                  <button onClick={onDisconnect} className="disconnect-button">
+                    <div className="i-ph:plug-fill button-icon" />
                     <span>Disconnect</span>
                   </button>
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-green-600 dark:text-green-400 bg-green-500/5 rounded-lg border border-green-500/20">
-                    <div className="i-ph:check-circle-fill" />
+                  <span className="connected-badge">
+                    <div className="i-ph:check-circle-fill badge-icon" />
                     <span>Connected</span>
                   </span>
                 </>
               )}
             </div>
             {authState.rateLimits && (
-              <div className="flex items-center gap-2 text-sm text-bolt-elements-textTertiary">
-                <div className="i-ph:clock-countdown opacity-60" />
+              <div className="rate-limit">
+                <div className="i-ph:clock-countdown clock-icon" />
                 <span>Rate limit resets at {authState.rateLimits.reset.toLocaleTimeString()}</span>
               </div>
             )}

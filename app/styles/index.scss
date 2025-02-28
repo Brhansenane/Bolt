@@ -6,6 +6,23 @@
 @use 'components/code.scss';
 @use 'components/editor.scss';
 @use 'components/toast.scss';
+@use 'components/ollama.scss';
+@use 'components/local-providers.scss';
+@use 'components/service-status.scss';
+@use 'components/task-manager.scss';
+@use 'components/profile.scss';
+@use 'components/settings.scss';
+@use 'components/features.scss';
+@use 'components/event-logs.scss';
+@use 'components/debug.scss';
+@use 'components/data.scss';
+@use 'components/notifications.scss';
+@use 'components/cloud-providers.scss';
+@use 'components/tab-management.scss';
+@use 'components/connections.scss';
+@use 'components/repository-dialog.scss';
+@use 'components/push-github-dialog.scss';
+@use 'components/connection-form.scss';
 
 html,
 body {

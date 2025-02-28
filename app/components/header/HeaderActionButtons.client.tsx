@@ -149,7 +149,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
             `https://api.netlify.com/api/v1/sites/${data.site.id}/deploys/${data.deploy.id}`,
             {
               headers: {
-                Authorization: `Bearer ${connection.token}`,
+                Authorization: `token ${connection.token}`,
               },
             },
           );

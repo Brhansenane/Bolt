@@ -5,6 +5,7 @@ import { useStore } from '@nanostores/react';
 import { formatDistanceToNow } from 'date-fns';
 import { classNames } from '~/utils/classNames';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import '~/styles/components/notifications.scss';
 
 interface NotificationDetails {
   type?: string;
@@ -92,8 +93,8 @@ const NotificationsTab = () => {
     if (type === 'update') {
       return {
         icon: 'i-ph:arrow-circle-up',
-        color: 'text-purple-500 dark:text-purple-400',
-        bg: 'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
+        iconClass: 'update-icon',
+        itemClass: 'update-notification',
       };
     }
 
@@ -101,26 +102,44 @@ const NotificationsTab = () => {
       case 'error':
         return {
           icon: 'i-ph:warning-circle',
-          color: 'text-red-500 dark:text-red-400',
-          bg: 'hover:bg-red-500/10 dark:hover:bg-red-500/20',
+          iconClass: 'error-icon',
+          itemClass: 'error-notification',
         };
       case 'warning':
         return {
           icon: 'i-ph:warning',
-          color: 'text-yellow-500 dark:text-yellow-400',
-          bg: 'hover:bg-yellow-500/10 dark:hover:bg-yellow-500/20',
+          iconClass: 'warning-icon',
+          itemClass: 'warning-notification',
         };
       case 'info':
         return {
           icon: 'i-ph:info',
-          color: 'text-blue-500 dark:text-blue-400',
-          bg: 'hover:bg-blue-500/10 dark:hover:bg-blue-500/20',
+          iconClass: 'info-icon',
+          itemClass: 'info-notification',
+        };
+      case 'system':
+        return {
+          icon: 'i-ph:gear',
+          iconClass: 'system-icon',
+          itemClass: 'system-notification',
+        };
+      case 'provider':
+        return {
+          icon: 'i-ph:robot',
+          iconClass: 'provider-icon',
+          itemClass: 'provider-notification',
+        };
+      case 'network':
+        return {
+          icon: 'i-ph:wifi-high',
+          iconClass: 'network-icon',
+          itemClass: 'network-notification',
         };
       default:
         return {
           icon: 'i-ph:bell',
-          color: 'text-gray-500 dark:text-gray-400',
-          bg: 'hover:bg-gray-500/10 dark:hover:bg-gray-500/20',
+          iconClass: '',
+          itemClass: '',
         };
     }
   };
@@ -128,34 +147,22 @@ const NotificationsTab = () => {
   const renderNotificationDetails = (details: NotificationDetails) => {
     if (details.type === 'update') {
       return (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{details.message}</p>
-          <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-500">
+        <div className="update-details">
+          <p className="update-message">{details.message}</p>
+          <div className="version-info">
             <p>Current Version: {details.currentVersion}</p>
             <p>Latest Version: {details.latestVersion}</p>
             <p>Branch: {details.branch}</p>
           </div>
-          <button
-            onClick={() => details.updateUrl && handleUpdateAction(details.updateUrl)}
-            className={classNames(
-              'mt-2 inline-flex items-center gap-2',
-              'rounded-lg px-3 py-1.5',
-              'text-sm font-medium',
-              'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-              'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-              'text-gray-900 dark:text-white',
-              'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-              'transition-all duration-200',
-            )}
-          >
-            <span className="i-ph:git-branch text-lg" />
+          <button onClick={() => details.updateUrl && handleUpdateAction(details.updateUrl)} className="update-button">
+            <span className="i-ph:git-branch branch-icon" />
             View Changes
           </button>
         </div>
       );
     }
 
-    return details.message ? <p className="text-sm text-gray-600 dark:text-gray-400">{details.message}</p> : null;
+    return details.message ? <p className="notification-message">{details.message}</p> : null;
   };
 
   const filterOptions: { id: FilterType; label: string; icon: string; color: string }[] = [
@@ -170,89 +177,54 @@ const NotificationsTab = () => {
   ];
 
   return (
-    <div className="flex h-full flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="notifications-container">
+      <div className="notifications-header">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <button
-              className={classNames(
-                'flex items-center gap-2',
-                'rounded-lg px-3 py-1.5',
-                'text-sm text-gray-900 dark:text-white',
-                'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-                'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-                'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-                'transition-all duration-200',
-              )}
-            >
+            <button className="filter-button">
               <span
-                className={classNames('text-lg', filterOptions.find((opt) => opt.id === filter)?.icon || 'i-ph:funnel')}
+                className={classNames(
+                  'filter-icon',
+                  filterOptions.find((opt) => opt.id === filter)?.icon || 'i-ph:funnel',
+                )}
                 style={{ color: filterOptions.find((opt) => opt.id === filter)?.color }}
               />
               {filterOptions.find((opt) => opt.id === filter)?.label || 'Filter Notifications'}
-              <span className="i-ph:caret-down text-lg text-gray-500 dark:text-gray-400" />
+              <span className="i-ph:caret-down caret-icon" />
             </button>
           </DropdownMenu.Trigger>
 
           <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className="min-w-[200px] bg-white dark:bg-[#0A0A0A] rounded-lg shadow-lg py-1 z-[250] animate-in fade-in-0 zoom-in-95 border border-[#E5E5E5] dark:border-[#1A1A1A]"
-              sideOffset={5}
-              align="start"
-              side="bottom"
-            >
+            <DropdownMenu.Content className="filter-dropdown" sideOffset={5} align="start" side="bottom">
               {filterOptions.map((option) => (
                 <DropdownMenu.Item
                   key={option.id}
-                  className="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-purple-500/10 dark:hover:bg-purple-500/20 cursor-pointer transition-colors"
+                  className="filter-item"
                   onClick={() => handleFilterChange(option.id)}
                 >
-                  <div className="mr-3 flex h-5 w-5 items-center justify-center">
-                    <div
-                      className={classNames(option.icon, 'text-lg group-hover:text-purple-500 transition-colors')}
-                      style={{ color: option.color }}
-                    />
+                  <div className="item-icon-container">
+                    <div className={classNames('item-icon', option.icon)} style={{ color: option.color }} />
                   </div>
-                  <span className="group-hover:text-purple-500 transition-colors">{option.label}</span>
+                  <span className="item-label">{option.label}</span>
                 </DropdownMenu.Item>
               ))}
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
 
-        <button
-          onClick={handleClearNotifications}
-          className={classNames(
-            'group flex items-center gap-2',
-            'rounded-lg px-3 py-1.5',
-            'text-sm text-gray-900 dark:text-white',
-            'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-            'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            'hover:bg-purple-500/10 dark:hover:bg-purple-500/20',
-            'transition-all duration-200',
-          )}
-        >
-          <span className="i-ph:trash text-lg text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
+        <button onClick={handleClearNotifications} className="clear-button">
+          <span className="i-ph:trash trash-icon" />
           Clear All
         </button>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="notifications-list">
         {filteredLogs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={classNames(
-              'flex flex-col items-center justify-center gap-4',
-              'rounded-lg p-8 text-center',
-              'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-              'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-            )}
-          >
-            <span className="i-ph:bell-slash text-4xl text-gray-400 dark:text-gray-600" />
-            <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">No Notifications</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">You're all caught up!</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="empty-state">
+            <span className="i-ph:bell-slash empty-icon" />
+            <div>
+              <h3 className="empty-title">No Notifications</h3>
+              <p className="empty-description">You're all caught up!</p>
             </div>
           </motion.div>
         ) : (
@@ -263,28 +235,21 @@ const NotificationsTab = () => {
                 key={log.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={classNames(
-                  'flex flex-col gap-2',
-                  'rounded-lg p-4',
-                  'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
-                  'border border-[#E5E5E5] dark:border-[#1A1A1A]',
-                  style.bg,
-                  'transition-all duration-200',
-                )}
+                className={classNames('notification-item', style.itemClass)}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <span className={classNames('text-lg', style.icon, style.color)} />
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">{log.message}</h3>
+                <div className="notification-header">
+                  <div className="notification-content">
+                    <span className={classNames('notification-icon', style.icon, style.iconClass)} />
+                    <div className="notification-text">
+                      <h3 className="notification-title">{log.message}</h3>
                       {log.details && renderNotificationDetails(log.details as NotificationDetails)}
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="notification-category">
                         Category: {log.category}
                         {log.subCategory ? ` > ${log.subCategory}` : ''}
                       </p>
                     </div>
                   </div>
-                  <time className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                  <time className="notification-time">
                     {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
                   </time>
                 </div>

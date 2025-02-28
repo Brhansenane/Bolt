@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { DialogRoot, DialogClose, Dialog, DialogTitle } from '~/components/ui/Dialog';
 import { db, getAll, deleteById } from '~/lib/persistence';
+import '~/styles/components/data.scss';
 
 export default function DataTab() {
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
@@ -242,36 +243,34 @@ export default function DataTab() {
   };
 
   return (
-    <div className="space-y-6">
-      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportSettings} className="hidden" />
+    <div className="data-container">
+      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportSettings} className="hidden-input" />
       {/* Reset Settings Dialog */}
       <DialogRoot open={showResetInlineConfirm} onOpenChange={setShowResetInlineConfirm}>
         <Dialog showCloseButton={false} className="z-[1000]">
-          <div className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:warning-circle-fill w-5 h-5 text-yellow-500" />
-              <DialogTitle>Reset All Settings?</DialogTitle>
+          <div className="confirm-dialog">
+            <div className="confirm-dialog-header">
+              <div className="i-ph:warning-circle-fill dialog-icon warning" />
+              <DialogTitle className="dialog-title">Reset All Settings?</DialogTitle>
             </div>
-            <p className="text-sm text-bolt-elements-textSecondary mt-2">
+            <p className="confirm-dialog-content">
               This will reset all your settings to their default values. This action cannot be undone.
             </p>
-            <div className="flex justify-end items-center gap-3 mt-6">
+            <div className="confirm-dialog-actions">
               <DialogClose asChild>
-                <button className="px-4 py-2 rounded-lg text-sm bg-[#F5F5F5] dark:bg-[#1A1A1A] text-[#666666] dark:text-[#999999] hover:text-[#333333] dark:hover:text-white">
-                  Cancel
-                </button>
+                <button className="cancel-button">Cancel</button>
               </DialogClose>
               <motion.button
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-white dark:bg-[#1A1A1A] text-yellow-600 dark:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/10 dark:hover:border-yellow-500/20"
+                className="confirm-button warning"
                 onClick={handleResetSettings}
                 disabled={isResetting}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 {isResetting ? (
-                  <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+                  <div className="i-ph:spinner-gap-bold spinner" />
                 ) : (
-                  <div className="i-ph:arrow-counter-clockwise w-4 h-4" />
+                  <div className="i-ph:arrow-counter-clockwise button-icon" />
                 )}
                 Reset Settings
               </motion.button>
@@ -283,31 +282,29 @@ export default function DataTab() {
       {/* Delete Confirmation Dialog */}
       <DialogRoot open={showDeleteInlineConfirm} onOpenChange={setShowDeleteInlineConfirm}>
         <Dialog showCloseButton={false} className="z-[1000]">
-          <div className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="i-ph:warning-circle-fill w-5 h-5 text-red-500" />
-              <DialogTitle>Delete All Chats?</DialogTitle>
+          <div className="confirm-dialog">
+            <div className="confirm-dialog-header">
+              <div className="i-ph:warning-circle-fill dialog-icon danger" />
+              <DialogTitle className="dialog-title">Delete All Chats?</DialogTitle>
             </div>
-            <p className="text-sm text-bolt-elements-textSecondary mt-2">
+            <p className="confirm-dialog-content">
               This will permanently delete all your chat history. This action cannot be undone.
             </p>
-            <div className="flex justify-end items-center gap-3 mt-6">
+            <div className="confirm-dialog-actions">
               <DialogClose asChild>
-                <button className="px-4 py-2 rounded-lg text-sm bg-[#F5F5F5] dark:bg-[#1A1A1A] text-[#666666] dark:text-[#999999] hover:text-[#333333] dark:hover:text-white">
-                  Cancel
-                </button>
+                <button className="cancel-button">Cancel</button>
               </DialogClose>
               <motion.button
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-white dark:bg-[#1A1A1A] text-red-500 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-500/10 dark:hover:border-red-500/20"
+                className="confirm-button danger"
                 onClick={handleDeleteAllChats}
                 disabled={isDeleting}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 {isDeleting ? (
-                  <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+                  <div className="i-ph:spinner-gap-bold spinner" />
                 ) : (
-                  <div className="i-ph:trash w-4 h-4" />
+                  <div className="i-ph:trash button-icon" />
                 )}
                 Delete All
               </motion.button>
@@ -318,33 +315,33 @@ export default function DataTab() {
 
       {/* Chat History Section */}
       <motion.div
-        className="bg-white dark:bg-[#0A0A0A] rounded-lg p-6 border border-[#E5E5E5] dark:border-[#1A1A1A]"
+        className="data-section"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className="i-ph:chat-circle-duotone w-5 h-5 text-purple-500" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Chat History</h3>
+        <div className="data-section-header">
+          <div className="i-ph:chat-circle-duotone section-icon" />
+          <h3 className="section-title">Chat History</h3>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Export or delete all your chat history.</p>
-        <div className="flex gap-4">
+        <p className="data-section-description">Export or delete all your chat history.</p>
+        <div className="data-section-actions">
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+            className="action-button primary"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleExportAllChats}
           >
-            <div className="i-ph:download-simple w-4 h-4" />
+            <div className="i-ph:download-simple button-icon" />
             Export All Chats
           </motion.button>
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-500 text-sm hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
+            className="action-button danger"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowDeleteInlineConfirm(true)}
           >
-            <div className="i-ph:trash w-4 h-4" />
+            <div className="i-ph:trash button-icon" />
             Delete All Chats
           </motion.button>
         </div>
@@ -352,44 +349,44 @@ export default function DataTab() {
 
       {/* Settings Backup Section */}
       <motion.div
-        className="bg-white dark:bg-[#0A0A0A] rounded-lg p-6 border border-[#E5E5E5] dark:border-[#1A1A1A]"
+        className="data-section"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className="i-ph:gear-duotone w-5 h-5 text-purple-500" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Settings Backup</h3>
+        <div className="data-section-header">
+          <div className="i-ph:gear-duotone section-icon" />
+          <h3 className="section-title">Settings Backup</h3>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="data-section-description">
           Export your settings to a JSON file or import settings from a previously exported file.
         </p>
-        <div className="flex gap-4">
+        <div className="data-section-actions">
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+            className="action-button primary"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleExportSettings}
           >
-            <div className="i-ph:download-simple w-4 h-4" />
+            <div className="i-ph:download-simple button-icon" />
             Export Settings
           </motion.button>
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+            className="action-button primary"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="i-ph:upload-simple w-4 h-4" />
+            <div className="i-ph:upload-simple button-icon" />
             Import Settings
           </motion.button>
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-50 text-yellow-600 text-sm hover:bg-yellow-100 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-500"
+            className="action-button warning"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowResetInlineConfirm(true)}
           >
-            <div className="i-ph:arrow-counter-clockwise w-4 h-4" />
+            <div className="i-ph:arrow-counter-clockwise button-icon" />
             Reset Settings
           </motion.button>
         </div>
@@ -397,51 +394,51 @@ export default function DataTab() {
 
       {/* API Keys Management Section */}
       <motion.div
-        className="bg-white dark:bg-[#0A0A0A] rounded-lg p-6 border border-[#E5E5E5] dark:border-[#1A1A1A]"
+        className="data-section"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className="i-ph:key-duotone w-5 h-5 text-purple-500" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">API Keys Management</h3>
+        <div className="data-section-header">
+          <div className="i-ph:key-duotone section-icon" />
+          <h3 className="section-title">API Keys Management</h3>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="data-section-description">
           Import API keys from a JSON file or download a template to fill in your keys.
         </p>
-        <div className="flex gap-4">
+        <div className="data-section-actions">
           <input
             ref={apiKeyFileInputRef}
             type="file"
             accept=".json"
             onChange={handleImportAPIKeys}
-            className="hidden"
+            className="hidden-input"
           />
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+            className="action-button primary"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleDownloadTemplate}
             disabled={isDownloadingTemplate}
           >
             {isDownloadingTemplate ? (
-              <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+              <div className="i-ph:spinner-gap-bold spinner" />
             ) : (
-              <div className="i-ph:download-simple w-4 h-4" />
+              <div className="i-ph:download-simple button-icon" />
             )}
             Download Template
           </motion.button>
           <motion.button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600"
+            className="action-button primary"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => apiKeyFileInputRef.current?.click()}
             disabled={isImportingKeys}
           >
             {isImportingKeys ? (
-              <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+              <div className="i-ph:spinner-gap-bold spinner" />
             ) : (
-              <div className="i-ph:upload-simple w-4 h-4" />
+              <div className="i-ph:upload-simple button-icon" />
             )}
             Import API Keys
           </motion.button>

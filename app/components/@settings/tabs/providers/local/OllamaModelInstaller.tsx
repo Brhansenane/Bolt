@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { classNames } from '~/utils/classNames';
 import { Progress } from '~/components/ui/Progress';
 import { useToast } from '~/components/ui/use-toast';
-import { useSettings } from '~/lib/hooks/useSettings';
+import { Button } from '~/components/ui/Button';
+import { Input } from '~/components/ui/Input';
+import { debounce } from '~/utils/debounce';
+
+// Create a CSS module for OllamaModelInstaller styles
+import '~/styles/components/ollama.scss';
 
 interface OllamaModelInstallerProps {
   onModelInstalled: () => void;
+  baseUrl?: string;
 }
 
 interface InstallProgress {
@@ -133,7 +139,10 @@ function OllamaIcon({ className }: { className?: string }) {
   );
 }
 
-export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelInstallerProps) {
+export default function OllamaModelInstaller({
+  onModelInstalled,
+  baseUrl = 'http://127.0.0.1:11434',
+}: OllamaModelInstallerProps) {
   const [modelString, setModelString] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInstalling, setIsInstalling] = useState(false);
@@ -141,21 +150,39 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
   const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [models, setModels] = useState<ModelInfo[]>(POPULAR_MODELS);
+  const [lastCheckedUrl, setLastCheckedUrl] = useState<string>('');
+  const [checkError, setCheckError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { providers } = useSettings();
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get base URL from provider settings
-  const baseUrl = providers?.Ollama?.settings?.baseUrl || 'http://127.0.0.1:11434';
+  // Function to check installed models and their versions with error handling
+  const checkInstalledModels = async (url: string, showToast = false) => {
+    // Don't check if we're already checking or installing
+    if (isChecking || isInstalling) {
+      return;
+    }
 
-  // Function to check installed models and their versions
-  const checkInstalledModels = async () => {
+    // Don't recheck if the URL hasn't changed and we've already checked recently
+    if (url === lastCheckedUrl && !showToast) {
+      return;
+    }
+
     try {
-      const response = await fetch(`${baseUrl}/api/tags`, {
+      setIsChecking(true);
+      setCheckError(null);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch(`${url}/api/tags`, {
         method: 'GET',
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch installed models');
+        throw new Error(`Failed to fetch installed models: ${response.statusText}`);
       }
 
       const data = (await response.json()) as { models: Array<{ name: string; digest: string; latest: string }> };
@@ -178,28 +205,49 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
           return model;
         }),
       );
+
+      setLastCheckedUrl(url);
+
+      if (showToast) {
+        toast('Model versions checked');
+      }
     } catch (error) {
       console.error('Error checking installed models:', error);
-    }
-  };
+      setCheckError(error instanceof Error ? error.message : 'Unknown error');
 
-  // Check installed models on mount and after installation
-  useEffect(() => {
-    checkInstalledModels();
-  }, [baseUrl]);
-
-  const handleCheckUpdates = async () => {
-    setIsChecking(true);
-
-    try {
-      await checkInstalledModels();
-      toast('Model versions checked');
-    } catch (err) {
-      console.error('Failed to check model versions:', err);
-      toast('Failed to check model versions');
+      if (showToast) {
+        toast('Failed to check model versions');
+      }
     } finally {
       setIsChecking(false);
     }
+  };
+
+  // Debounced version of checkInstalledModels to prevent too many requests
+  const debouncedCheckModels = useRef(
+    debounce((url: string) => {
+      checkInstalledModels(url, false);
+    }, 1000),
+  ).current;
+
+  // Check installed models when baseUrl changes
+  useEffect(() => {
+    if (baseUrl) {
+      // Only check models on initial mount or when baseUrl changes
+      if (lastCheckedUrl !== baseUrl) {
+        debouncedCheckModels(baseUrl);
+      }
+    }
+
+    return () => {
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
+  }, [baseUrl]);
+
+  const handleCheckUpdates = async () => {
+    await checkInstalledModels(baseUrl, true);
   };
 
   const filteredModels = models.filter((model) => {
@@ -213,7 +261,7 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
   });
 
   const handleInstallModel = async (modelToInstall: string) => {
-    if (!modelToInstall) {
+    if (!modelToInstall || isInstalling) {
       return;
     }
 
@@ -229,13 +277,19 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
       setModelString('');
       setSearchQuery('');
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for large models
+
       const response = await fetch(`${baseUrl}/api/pull`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name: modelToInstall }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -289,8 +343,15 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
 
       toast('Successfully installed ' + modelToInstall + '. The model list will refresh automatically.');
 
-      // Ensure we call onModelInstalled after successful installation
-      setTimeout(() => {
+      /*
+       * Ensure we call onModelInstalled after successful installation
+       * Use a small delay to ensure the server has time to register the new model
+       */
+      checkTimeoutRef.current = setTimeout(() => {
+        // Reset the URL check to force a recheck on next render
+        setLastCheckedUrl('');
+
+        // This single call will update both the UI and the model selector
         onModelInstalled();
       }, 1000);
     } catch (err) {
@@ -304,8 +365,15 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
   };
 
   const handleUpdateModel = async (modelToUpdate: string) => {
+    if (isInstalling) {
+      return;
+    }
+
     try {
       setModels((prev) => prev.map((m) => (m.name === modelToUpdate ? { ...m, status: 'updating' } : m)));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for large models
 
       const response = await fetch(`${baseUrl}/api/pull`, {
         method: 'POST',
@@ -313,7 +381,10 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name: modelToUpdate }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -368,7 +439,16 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
       toast('Successfully updated ' + modelToUpdate);
 
       // Refresh model list after update
-      await checkInstalledModels();
+      checkTimeoutRef.current = setTimeout(() => {
+        // Reset the URL check to force a recheck
+        setLastCheckedUrl('');
+
+        // Check installed models to update the UI
+        checkInstalledModels(baseUrl, false);
+
+        // Notify parent component to refresh the model selector
+        onModelInstalled();
+      }, 1000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error(`Error updating ${modelToUpdate}:`, errorMessage);
@@ -379,223 +459,301 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
     }
   };
 
+  // Add a function to handle model deletion
+  const handleDeleteModel = async (modelName: string) => {
+    if (isInstalling) {
+      return;
+    }
+
+    try {
+      // Update UI to show deletion in progress
+      setModels((prev) => prev.map((m) => (m.name === modelName ? { ...m, status: 'updating' } : m)));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(`${baseUrl}/api/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: modelName }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete model: ${response.statusText}`);
+      }
+
+      // Remove the model from the local state immediately
+      setModels((prev) =>
+        prev.map((m) =>
+          m.name === modelName
+            ? { ...m, installedVersion: undefined, needsUpdate: false, latestVersion: undefined }
+            : m,
+        ),
+      );
+
+      toast(`Successfully deleted ${modelName}`);
+
+      // Force a refresh of the model list
+      setLastCheckedUrl(''); // Reset the URL check to force a refresh
+
+      // First immediate refresh
+      onModelInstalled();
+
+      // Second refresh after a delay to ensure the model selector is updated
+      setTimeout(() => {
+        onModelInstalled();
+      }, 1000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error(`Error deleting ${modelName}:`, errorMessage);
+      toast(`Failed to delete ${modelName}. ${errorMessage}`);
+
+      // Reset the model status
+      setModels((prev) => prev.map((m) => (m.name === modelName ? { ...m, status: 'error' } : m)));
+    }
+  };
+
   const allTags = Array.from(new Set(POPULAR_MODELS.flatMap((model) => model.tags)));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between pt-6">
-        <div className="flex items-center gap-3">
-          <OllamaIcon className="w-8 h-8 text-purple-500" />
+    <div className="ollama-installer">
+      <div className="installer-header">
+        <div className="installer-title">
+          <OllamaIcon className="installer-icon" />
           <div>
-            <h3 className="text-lg font-semibold text-bolt-elements-textPrimary">Ollama Models</h3>
-            <p className="text-sm text-bolt-elements-textSecondary mt-1">Install and manage your Ollama models</p>
+            <h3 className="installer-title-text">Ollama Models</h3>
+            <p className="installer-subtitle">Install and manage your Ollama models</p>
           </div>
         </div>
-        <motion.button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleCheckUpdates}
-          disabled={isChecking}
-          className={classNames(
-            'px-4 py-2 rounded-lg',
-            'bg-purple-500/10 text-purple-500',
-            'hover:bg-purple-500/20',
-            'transition-all duration-200',
-            'flex items-center gap-2',
-          )}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          className={classNames('check-updates-btn', {
+            updating: isChecking,
+          })}
+          disabled={isChecking || isInstalling}
         >
           {isChecking ? (
-            <div className="i-ph:spinner-gap-bold animate-spin" />
+            <div className="i-ph:spinner-gap-bold animate-spin mr-2" />
           ) : (
-            <div className="i-ph:arrows-clockwise" />
+            <div className="i-ph:arrows-clockwise mr-2" />
           )}
           Check Updates
-        </motion.button>
+        </Button>
       </div>
 
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <div className="space-y-1">
-            <input
-              type="text"
-              className={classNames(
-                'w-full px-4 py-3 rounded-xl',
-                'bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor',
-                'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/30',
-                'transition-all duration-200',
-              )}
-              placeholder="Search models or enter custom model name..."
-              value={searchQuery || modelString}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchQuery(value);
-                setModelString(value);
-              }}
-              disabled={isInstalling}
-            />
-            <p className="text-sm text-bolt-elements-textSecondary px-1">
-              Browse models at{' '}
-              <a
-                href="https://ollama.com/library"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-500 hover:underline inline-flex items-center gap-1 text-base font-medium"
-              >
-                ollama.com/library
-                <div className="i-ph:arrow-square-out text-sm" />
-              </a>{' '}
-              and copy model names to install
-            </p>
-          </div>
+      {checkError && (
+        <div className="connection-error">
+          <div className="i-ph:warning-circle error-icon" />
+          <span>Connection error: {checkError}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => checkInstalledModels(baseUrl, true)}
+            className="retry-button"
+          >
+            Retry
+          </Button>
         </div>
-        <motion.button
+      )}
+
+      <div className="search-container">
+        <div className="search-input-wrapper">
+          <Input
+            type="text"
+            className="search-input"
+            placeholder="Search models or enter custom model name..."
+            value={searchQuery || modelString}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchQuery(value);
+              setModelString(value);
+            }}
+            disabled={isInstalling}
+          />
+          <p className="search-help-text">
+            Browse models at{' '}
+            <a href="https://ollama.com/library" target="_blank" rel="noopener noreferrer" className="library-link">
+              ollama.com/library
+              <div className="i-ph:arrow-square-out text-sm" />
+            </a>{' '}
+            and copy model names to install
+          </p>
+        </div>
+        <Button
+          variant="default"
+          size="sm"
           onClick={() => handleInstallModel(modelString)}
+          className={classNames('install-btn', {
+            disabled: !modelString || isInstalling,
+          })}
           disabled={!modelString || isInstalling}
-          className={classNames(
-            'rounded-lg px-4 py-2',
-            'bg-purple-500 text-white text-sm',
-            'hover:bg-purple-600',
-            'transition-all duration-200',
-            'flex items-center gap-2',
-            { 'opacity-50 cursor-not-allowed': !modelString || isInstalling },
-          )}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
         >
           {isInstalling ? (
-            <div className="flex items-center gap-2">
-              <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4" />
+            <div className="btn-content">
+              <div className="i-ph:spinner-gap-bold animate-spin w-4 h-4 mr-2" />
               <span>Installing...</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <OllamaIcon className="w-4 h-4" />
+            <div className="btn-content">
+              <OllamaIcon className="btn-icon mr-2" />
               <span>Install Model</span>
             </div>
           )}
-        </motion.button>
+        </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="tag-filters">
         {allTags.map((tag) => (
-          <button
+          <Button
             key={tag}
+            variant="outline"
+            size="sm"
             onClick={() => {
               setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
             }}
-            className={classNames(
-              'px-3 py-1 rounded-full text-xs font-medium transition-all duration-200',
-              selectedTags.includes(tag)
-                ? 'bg-purple-500 text-white'
-                : 'bg-bolt-elements-background-depth-3 text-bolt-elements-textSecondary hover:bg-bolt-elements-background-depth-4',
-            )}
+            className={classNames('tag-filter', {
+              active: selectedTags.includes(tag),
+            })}
           >
             {tag}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
-        {filteredModels.map((model) => (
-          <motion.div
-            key={model.name}
-            className={classNames(
-              'flex items-start gap-2 p-3 rounded-lg',
-              'bg-bolt-elements-background-depth-3',
-              'hover:bg-bolt-elements-background-depth-4',
-              'transition-all duration-200',
-              'relative group',
-            )}
-          >
-            <OllamaIcon className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-bolt-elements-textPrimary font-mono text-sm">{model.name}</p>
-                  <p className="text-xs text-bolt-elements-textSecondary mt-0.5">{model.desc}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-bolt-elements-textTertiary">{model.size}</span>
-                  {model.installedVersion && (
-                    <div className="mt-0.5 flex flex-col items-end gap-0.5">
-                      <span className="text-xs text-bolt-elements-textTertiary">v{model.installedVersion}</span>
-                      {model.needsUpdate && model.latestVersion && (
-                        <span className="text-xs text-purple-500">v{model.latestVersion} available</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex flex-wrap gap-1">
-                  {model.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-1.5 py-0.5 rounded-full text-[10px] bg-bolt-elements-background-depth-4 text-bolt-elements-textTertiary"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  {model.installedVersion ? (
-                    model.needsUpdate ? (
-                      <motion.button
-                        onClick={() => handleUpdateModel(model.name)}
-                        className={classNames(
-                          'px-2 py-0.5 rounded-lg text-xs',
-                          'bg-purple-500 text-white',
-                          'hover:bg-purple-600',
-                          'transition-all duration-200',
-                          'flex items-center gap-1',
+      <div className="model-grid">
+        {isChecking ? (
+          <div className="models-loading">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="model-placeholder" />
+            ))}
+          </div>
+        ) : filteredModels.length === 0 ? (
+          <div className="models-empty">
+            <div className="i-ph:cube-transparent empty-icon" />
+            <p className="empty-message">No models found matching your search</p>
+            <p className="empty-help">Try a different search term or tag filter</p>
+          </div>
+        ) : (
+          filteredModels.map((model) => (
+            <motion.div
+              key={model.name}
+              className={classNames('model-card', {
+                'model-installed': !!model.installedVersion,
+                'model-updating': model.status === 'updating',
+                'model-error': model.status === 'error',
+              })}
+            >
+              <OllamaIcon className="model-icon" />
+              <div className="model-details">
+                <div className="model-header">
+                  <div>
+                    <p className="model-name">{model.name}</p>
+                    <p className="model-description">{model.desc}</p>
+                  </div>
+                  <div className="model-meta">
+                    <span className="model-size">{model.size}</span>
+                    {model.installedVersion && (
+                      <div className="model-version-info">
+                        <span className="model-installed-version">v{model.installedVersion}</span>
+                        {model.needsUpdate && model.latestVersion && (
+                          <span className="model-update-available">v{model.latestVersion} available</span>
                         )}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div className="i-ph:arrows-clockwise text-xs" />
-                        Update
-                      </motion.button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="model-footer">
+                  <div className="model-tags">
+                    {model.tags.map((tag) => (
+                      <span key={tag} className="model-tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="model-actions">
+                    {model.installedVersion ? (
+                      model.needsUpdate ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateModel(model.name)}
+                          className="update-model-btn"
+                          disabled={model.status === 'updating' || isInstalling}
+                        >
+                          {model.status === 'updating' ? (
+                            <>
+                              <div className="i-ph:spinner-gap-bold animate-spin mr-1" />
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <div className="i-ph:arrows-clockwise mr-1" />
+                              Update
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="model-installed-actions">
+                          <span className="model-up-to-date">
+                            <div className="i-ph:check-circle mr-1" />
+                            Up to date
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete ${model.name}?`)) {
+                                handleDeleteModel(model.name);
+                              }
+                            }}
+                            className="delete-model-btn"
+                            disabled={model.status === 'updating' || isInstalling}
+                          >
+                            <div className="i-ph:trash mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      )
                     ) : (
-                      <span className="px-2 py-0.5 rounded-lg text-xs text-green-500 bg-green-500/10">Up to date</span>
-                    )
-                  ) : (
-                    <motion.button
-                      onClick={() => handleInstallModel(model.name)}
-                      className={classNames(
-                        'px-2 py-0.5 rounded-lg text-xs',
-                        'bg-purple-500 text-white',
-                        'hover:bg-purple-600',
-                        'transition-all duration-200',
-                        'flex items-center gap-1',
-                      )}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className="i-ph:download text-xs" />
-                      Install
-                    </motion.button>
-                  )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInstallModel(model.name)}
+                        className="install-model-btn"
+                        disabled={isInstalling}
+                      >
+                        <div className="i-ph:download mr-1" />
+                        Install
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))
+        )}
       </div>
 
       {installProgress && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-bolt-elements-textSecondary">{installProgress.status}</span>
-            <div className="flex items-center gap-4">
-              <span className="text-bolt-elements-textTertiary">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="progress-container">
+          <div className="progress-info">
+            <span className="progress-status">{installProgress.status}</span>
+            <div className="progress-stats">
+              <span className="progress-size">
                 {installProgress.downloadedSize} / {installProgress.totalSize}
               </span>
-              <span className="text-bolt-elements-textTertiary">{installProgress.speed}</span>
-              <span className="text-bolt-elements-textSecondary">{Math.round(installProgress.progress)}%</span>
+              <span className="progress-speed">{installProgress.speed}</span>
+              <span className="progress-percentage">{Math.round(installProgress.progress)}%</span>
             </div>
           </div>
-          <Progress value={installProgress.progress} className="h-1" />
+          <Progress value={installProgress.progress} className="progress-bar" />
         </motion.div>
       )}
     </div>
