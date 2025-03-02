@@ -159,7 +159,8 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     try {
       const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&type=all', {
         headers: {
-          Authorization: `Bearer ${connection.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `token ${connection.token}`,
         },
       });
 
@@ -238,10 +239,15 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
     setIsLoading(true);
 
     try {
+      const connection = getLocalStorage('github_connection');
+      const headers: HeadersInit = connection?.token
+        ? {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${connection.token}`,
+          }
+        : {};
       const response = await fetch(`https://api.github.com/repos/${repo.full_name}/branches`, {
-        headers: {
-          Authorization: `Bearer ${getLocalStorage('github_connection')?.token}`,
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -291,7 +297,12 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
         .slice(-2);
 
       const connection = getLocalStorage('github_connection');
-      const headers: HeadersInit = connection?.token ? { Authorization: `Bearer ${connection.token}` } : {};
+      const headers: HeadersInit = connection?.token
+        ? {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${connection.token}`,
+          }
+        : {};
 
       // Fetch repository tree
       const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
