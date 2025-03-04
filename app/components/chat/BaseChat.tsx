@@ -268,49 +268,71 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
       input.onchange = async (e) => {
         const selectedFiles = Array.from((e.target as HTMLInputElement).files || []);
+        processNewFiles(selectedFiles, 'upload');
+      };
+      input.click();
+    };
 
-        if (selectedFiles.length === 0) {
-          return;
+    // Unified file processing function
+    const processNewFiles = (filesToProcess: File[], source: 'upload' | 'paste') => {
+      // Validate file types and sizes first
+      const filteredFiles = filesToProcess.filter((file) => {
+        // Block script files
+        if (file.name.match(/\.(sh|bat|ps1)$/i)) {
+          toast.error(
+            <div>
+              <div className="font-bold">Script files not allowed</div>
+              <div className="text-xs text-gray-200">
+                For security reasons, script files (.sh, .bat, .ps1) are not supported.
+              </div>
+            </div>,
+            { autoClose: 5000 },
+          );
+          return false;
         }
 
-        // We process all types of files now
-        processSelectedFiles(selectedFiles);
-      };
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+          toast.warning(`File ${file.name} exceeds maximum size of 5MB and was ignored.`);
+          return false;
+        }
 
-      // Helper function to process selected files
-      const processSelectedFiles = (filesToProcess: File[]) => {
-        // Prepare arrays for new files
-        const newUploadedFiles = [...uploadedFiles, ...filesToProcess];
-        const newImageDataList = [...imageDataList];
+        return true;
+      });
 
-        // Add placeholders for all files first
-        filesToProcess.forEach((file) => {
-          if (file.type.startsWith('image/')) {
-            newImageDataList.push('loading-image');
-          } else {
-            newImageDataList.push('non-image');
-          }
-        });
+      if (filteredFiles.length === 0) {
+        return;
+      }
 
-        // Update state once with all files
-        setUploadedFiles?.(newUploadedFiles);
-        setImageDataList?.(newImageDataList);
+      // Prepare new files array
+      const newUploadedFiles = [...uploadedFiles, ...filteredFiles];
+      const newImageDataList = [
+        ...imageDataList,
+        ...filteredFiles.map((file) => (file.type.startsWith('image/') ? 'loading-image' : 'non-image')),
+      ];
 
-        // Process the files
-        filesToProcess.forEach((file, fileIndex) => {
-          const actualIndex = uploadedFiles.length + fileIndex;
+      // Update state
+      setUploadedFiles?.(newUploadedFiles);
+      setImageDataList?.(newImageDataList);
 
-          if (file.type.startsWith('image/')) {
-            // Process image
-            processImageFile(file, actualIndex);
-          } else if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-            // Process text file to show preview
-            previewTextFile(file, actualIndex);
-          }
-        });
-      };
+      // Process individual files
+      filteredFiles.forEach((file, index) => {
+        const actualIndex = uploadedFiles.length + index;
+        processIndividualFiles(file, actualIndex, source);
+      });
+    };
 
-      input.click();
+    const processIndividualFiles = (file: File, index: number, _source: 'upload' | 'paste') => {
+      if (file.type.startsWith('image/')) {
+        processImageFile(file, index);
+      } else if (file.type.includes('text') || file.name.match(/\.(txt|md|pdf|docx)$/i)) {
+        previewTextFile(file, index);
+      }
+    };
+
+    // Rename and update processPastedFiles to use new unified function
+    const processPastedFiles = (filesToProcess: File[]) => {
+      processNewFiles(filesToProcess, 'paste');
     };
 
     // Function to process image files
@@ -432,47 +454,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           processPastedFiles(clipboardFiles);
         }
       }
-    };
-
-    // Helper function to process pasted files
-    const processPastedFiles = (filesToProcess: File[]) => {
-      // Prepare arrays for new files
-      const newUploadedFiles = [...uploadedFiles, ...filesToProcess];
-      const newImageDataList = [...imageDataList];
-
-      // Add placeholders for all files first
-      filesToProcess.forEach((file) => {
-        if (file.type.startsWith('image/')) {
-          newImageDataList.push('loading-image');
-        } else {
-          newImageDataList.push('non-image');
-        }
-      });
-
-      // Update state once with all files
-      setUploadedFiles?.(newUploadedFiles);
-      setImageDataList?.(newImageDataList);
-
-      // Process the files
-      filesToProcess.forEach((file, fileIndex) => {
-        const actualIndex = uploadedFiles.length + fileIndex;
-
-        if (file.type.startsWith('image/')) {
-          // Process image
-          processImageFile(file, actualIndex);
-        } else if (
-          file.type.includes('text') ||
-          file.name.endsWith('.txt') ||
-          file.name.endsWith('.md') ||
-          file.type === 'application/pdf' ||
-          file.name.endsWith('.pdf') ||
-          file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-          file.name.endsWith('.docx')
-        ) {
-          // Process text file to show preview
-          previewTextFile(file, actualIndex);
-        }
-      });
     };
 
     const baseChat = (
