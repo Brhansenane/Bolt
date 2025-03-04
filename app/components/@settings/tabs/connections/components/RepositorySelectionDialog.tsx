@@ -160,7 +160,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&type=all', {
         headers: {
           Accept: 'application/vnd.github.v3+json',
-          Authorization: `token ${connection.token}`,
+          Authorization: `Bearer ${connection.token}`,
         },
       });
 
@@ -243,7 +243,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       const headers: HeadersInit = connection?.token
         ? {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${connection.token}`,
+            Authorization: `Bearer ${connection.token}`,
           }
         : {};
       const response = await fetch(`https://api.github.com/repos/${repo.full_name}/branches`, {
@@ -300,7 +300,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       const headers: HeadersInit = connection?.token
         ? {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${connection.token}`,
+            Authorization: `Bearer ${connection.token}`,
           }
         : {};
 

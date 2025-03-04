@@ -74,7 +74,7 @@ export function PushToGitHubDialog({ isOpen, onClose, onPush }: PushToGitHubDial
         {
           headers: {
             Accept: 'application/vnd.github.v3+json',
-            Authorization: `token ${token.trim()}`,
+            Authorization: `Bearer ${token.trim()}`,
           },
         },
       );
