@@ -263,8 +263,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const handleFileUpload = () => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept =
-        'image/*,.txt,.csv,.json,.md,.js,.py,.html,.css,.tsx,.jsx,.ts,.xml,.yaml,.yml,.sql,.c,.cpp,.h,.java,.rb,.php,.go,.rs,.swift,.docx,.xlsx,.pptx,.rtf,.conf,.ini,.log,.env,.gitignore,.pdf';
+      input.accept = 'image/*,.txt,.md,.docx,.pdf';
       input.multiple = true;
 
       input.onchange = async (e) => {
@@ -304,41 +303,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           if (file.type.startsWith('image/')) {
             // Process image
             processImageFile(file, actualIndex);
-          } else if (
-            file.type.includes('text') ||
-            file.name.endsWith('.txt') ||
-            file.name.endsWith('.md') ||
-            file.name.endsWith('.js') ||
-            file.name.endsWith('.py') ||
-            file.name.endsWith('.html') ||
-            file.name.endsWith('.css') ||
-            file.name.endsWith('.json') ||
-            file.name.endsWith('.ts') ||
-            file.name.endsWith('.tsx') ||
-            file.name.endsWith('.jsx') ||
-            file.name.endsWith('.xml') ||
-            file.name.endsWith('.yaml') ||
-            file.name.endsWith('.yml') ||
-            file.name.endsWith('.sql') ||
-            file.name.endsWith('.c') ||
-            file.name.endsWith('.cpp') ||
-            file.name.endsWith('.h') ||
-            file.name.endsWith('.java') ||
-            file.name.endsWith('.rb') ||
-            file.name.endsWith('.php') ||
-            file.name.endsWith('.go') ||
-            file.name.endsWith('.rs') ||
-            file.name.endsWith('.swift') ||
-            file.name.endsWith('.sh') ||
-            file.name.endsWith('.bat') ||
-            file.name.endsWith('.ps1') ||
-            file.name.endsWith('.csv') ||
-            file.name.endsWith('.ini') ||
-            file.name.endsWith('.log') ||
-            file.name.endsWith('.env') ||
-            file.name.endsWith('.gitignore') ||
-            file.name.endsWith('.conf')
-          ) {
+          } else if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
             // Process text file to show preview
             previewTextFile(file, actualIndex);
           }
@@ -499,36 +464,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           file.type.includes('text') ||
           file.name.endsWith('.txt') ||
           file.name.endsWith('.md') ||
-          file.name.endsWith('.js') ||
-          file.name.endsWith('.py') ||
-          file.name.endsWith('.html') ||
-          file.name.endsWith('.css') ||
-          file.name.endsWith('.json') ||
-          file.name.endsWith('.ts') ||
-          file.name.endsWith('.tsx') ||
-          file.name.endsWith('.jsx') ||
-          file.name.endsWith('.xml') ||
-          file.name.endsWith('.yaml') ||
-          file.name.endsWith('.yml') ||
-          file.name.endsWith('.sql') ||
-          file.name.endsWith('.c') ||
-          file.name.endsWith('.cpp') ||
-          file.name.endsWith('.h') ||
-          file.name.endsWith('.java') ||
-          file.name.endsWith('.rb') ||
-          file.name.endsWith('.php') ||
-          file.name.endsWith('.go') ||
-          file.name.endsWith('.rs') ||
-          file.name.endsWith('.swift') ||
-          file.name.endsWith('.sh') ||
-          file.name.endsWith('.bat') ||
-          file.name.endsWith('.ps1') ||
-          file.name.endsWith('.csv') ||
-          file.name.endsWith('.ini') ||
-          file.name.endsWith('.log') ||
-          file.name.endsWith('.env') ||
-          file.name.endsWith('.gitignore') ||
-          file.name.endsWith('.conf') ||
           file.type === 'application/pdf' ||
           file.name.endsWith('.pdf') ||
           file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
