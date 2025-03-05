@@ -1,4 +1,4 @@
-import type { GitHubRepoInfo, GitHubContent, RepositoryStats } from '~/types/GitHub';
+import type { GitHubRepoInfo, GitHubContent, RepositoryStats, GitHubUserResponse } from '~/types/GitHub';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -8,7 +8,6 @@ import { motion } from 'framer-motion';
 import { formatSize } from '~/utils/formatSize';
 import { Input } from '~/components/ui/Input';
 import Cookies from 'js-cookie';
-import type { GitHubUserResponse } from '~/types/GitHub';
 
 interface GitHubTreeResponse {
   tree: Array<{
@@ -124,6 +123,84 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
   );
 }
 
+// Add this new component for GitHub authentication
+function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={onClose}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-bolt-elements-background dark:bg-bolt-elements-background-dark rounded-lg shadow-lg p-6 max-w-md w-full z-50">
+          <Dialog.Title className="text-lg font-medium text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark mb-4">
+            Connect to GitHub
+          </Dialog.Title>
+
+          <div className="space-y-4">
+            <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark">
+              To access private repositories or avoid rate limits, you need to connect your GitHub account. You have two
+              options:
+            </p>
+
+            <div className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 p-4 rounded-lg">
+              <h3 className="font-medium text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark mb-2">
+                Option 1: Connect in Settings
+              </h3>
+              <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark mb-3">
+                Go to Settings &gt; Connections to connect your GitHub account through the UI.
+              </p>
+              <button
+                onClick={() => {
+                  onClose();
+                  window.location.href = '/settings/connections';
+                }}
+                className="w-full py-2 px-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+              >
+                Go to Settings
+              </button>
+            </div>
+
+            <div className="bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 p-4 rounded-lg">
+              <h3 className="font-medium text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark mb-2">
+                Option 2: Use Environment Variables
+              </h3>
+              <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark mb-3">
+                Add these variables to your{' '}
+                <code className="px-1 py-0.5 bg-bolt-elements-background-depth-3 dark:bg-bolt-elements-background-depth-4 rounded">
+                  .env.local
+                </code>{' '}
+                file:
+              </p>
+              <div className="bg-bolt-elements-background-depth-3 dark:bg-bolt-elements-background-depth-4 p-3 rounded text-xs font-mono overflow-x-auto">
+                <div>VITE_GITHUB_ACCESS_TOKEN=your_token_here</div>
+                <div>VITE_GITHUB_TOKEN_TYPE=classic</div>
+              </div>
+              <p className="text-xs text-bolt-elements-textTertiary dark:text-bolt-elements-textTertiary-dark mt-2">
+                Get your token at{' '}
+                <a
+                  href="https://github.com/settings/tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-500 hover:underline"
+                >
+                  github.com/settings/tokens
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => onClose()}
+              className="py-2 px-4 border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark rounded-lg text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark hover:bg-bolt-elements-background-depth-2 dark:hover:bg-bolt-elements-background-depth-3 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: RepositorySelectionDialogProps) {
   const [selectedRepository, setSelectedRepository] = useState<GitHubRepoInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -140,6 +217,7 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
   const [showStatsDialog, setShowStatsDialog] = useState(false);
   const [currentStats, setCurrentStats] = useState<RepositoryStats | null>(null);
   const [pendingGitUrl, setPendingGitUrl] = useState<string>('');
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Initialize GitHub connection from environment variables if not already connected
   useEffect(() => {
@@ -389,7 +467,19 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       });
 
       if (!repoInfoResponse.ok) {
-        throw new Error('Failed to fetch repository information');
+        if (repoInfoResponse.status === 401 || repoInfoResponse.status === 403) {
+          throw new Error(
+            `Authentication failed (${repoInfoResponse.status}). Your GitHub token may be invalid or missing the required permissions.`,
+          );
+        } else if (repoInfoResponse.status === 404) {
+          throw new Error(
+            `Repository not found (${repoInfoResponse.status}). It may be private or doesn't exist. Please check the URL and your access permissions.`,
+          );
+        } else {
+          throw new Error(
+            `Failed to fetch repository information: ${repoInfoResponse.statusText} (${repoInfoResponse.status})`,
+          );
+        }
       }
 
       const repoInfo = (await repoInfoResponse.json()) as { default_branch: string };
@@ -523,7 +613,33 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
       setShowStatsDialog(true);
     } catch (error) {
       console.error('Error preparing repository:', error);
-      toast.error('Failed to prepare repository. Please try again.');
+
+      // Check if it's an authentication error
+      const errorMessage = error instanceof Error ? error.message : 'Failed to prepare repository. Please try again.';
+
+      // Show the GitHub auth dialog for any authentication or permission errors
+      if (
+        errorMessage.includes('Authentication failed') ||
+        errorMessage.includes('may be private') ||
+        errorMessage.includes('Unauthorized') ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('403') ||
+        errorMessage.includes('access permissions')
+      ) {
+        // Directly show the auth dialog instead of just showing a toast
+        setShowAuthDialog(true);
+
+        toast.error(
+          <div>
+            {errorMessage}{' '}
+            <button onClick={() => setShowAuthDialog(true)} className="underline font-medium mt-2 block">
+              Connect GitHub Account
+            </button>
+          </div>,
+        );
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -605,17 +721,34 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
             {activeTab === 'url' ? (
               <div className="space-y-4">
                 <Input
-                  placeholder="Enter repository URL"
+                  type="text"
+                  placeholder="Enter GitHub repository URL"
                   value={customUrl}
                   onChange={(e) => setCustomUrl(e.target.value)}
-                  className={classNames('w-full', {
-                    'border-red-500': false,
-                  })}
+                  className="w-full"
                 />
+
+                {/* Add a helper text and connect button */}
+                <div className="text-sm text-bolt-elements-textSecondary bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-3 p-3 rounded-lg">
+                  <p className="mb-2">
+                    <span className="i-ph:info text-blue-500 mr-1" />
+                    To import private repositories, you need to connect your GitHub account.
+                  </p>
+                  <button
+                    onClick={() => setShowAuthDialog(true)}
+                    className="text-purple-500 hover:text-purple-600 underline font-medium"
+                  >
+                    Connect GitHub Account
+                  </button>
+                </div>
+
                 <button
                   onClick={handleImport}
                   disabled={!customUrl}
-                  className="w-full h-10 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 justify-center"
+                  className={classNames(
+                    'w-full h-10 px-4 py-2 rounded-lg text-white transition-all duration-200 flex items-center gap-2 justify-center',
+                    customUrl ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed',
+                  )}
                 >
                   Import Repository
                 </button>
@@ -731,6 +864,8 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
           isLargeRepo={currentStats.totalSize > 50 * 1024 * 1024}
         />
       )}
+      {/* GitHub Auth Dialog */}
+      <GitHubAuthDialog isOpen={showAuthDialog} onClose={() => setShowAuthDialog(false)} />
     </Dialog.Root>
   );
 }
