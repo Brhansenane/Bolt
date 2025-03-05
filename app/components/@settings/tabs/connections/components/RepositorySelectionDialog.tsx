@@ -7,6 +7,8 @@ import { getLocalStorage } from '~/lib/persistence';
 import { motion } from 'framer-motion';
 import { formatSize } from '~/utils/formatSize';
 import { Input } from '~/components/ui/Input';
+import Cookies from 'js-cookie';
+import type { GitHubUserResponse } from '~/types/GitHub';
 
 interface GitHubTreeResponse {
   tree: Array<{
@@ -138,6 +140,62 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
   const [showStatsDialog, setShowStatsDialog] = useState(false);
   const [currentStats, setCurrentStats] = useState<RepositoryStats | null>(null);
   const [pendingGitUrl, setPendingGitUrl] = useState<string>('');
+
+  // Initialize GitHub connection from environment variables if not already connected
+  useEffect(() => {
+    const savedConnection = getLocalStorage('github_connection');
+
+    // If no connection exists but environment variables are set, create a connection
+    if (!savedConnection && import.meta.env.VITE_GITHUB_ACCESS_TOKEN) {
+      const token = import.meta.env.VITE_GITHUB_ACCESS_TOKEN;
+      const tokenType = import.meta.env.VITE_GITHUB_TOKEN_TYPE === 'fine-grained' ? 'fine-grained' : 'classic';
+
+      // Fetch GitHub user info to initialize the connection
+      fetch('https://api.github.com/user', {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Invalid token or unauthorized');
+          }
+
+          return response.json();
+        })
+        .then((data: unknown) => {
+          // Type assertion for the GitHub user data
+          const userData = data as {
+            login: string;
+            avatar_url: string;
+            name: string | null;
+          };
+
+          // Save connection to local storage
+          const newConnection = {
+            user: userData as unknown as GitHubUserResponse,
+            token,
+            tokenType,
+          };
+
+          localStorage.setItem('github_connection', JSON.stringify(newConnection));
+
+          // Also save as cookies for API requests
+          Cookies.set('githubToken', token);
+          Cookies.set('githubUsername', userData.login);
+          Cookies.set('git:github.com', JSON.stringify({ username: token, password: 'x-oauth-basic' }));
+
+          // Refresh repositories after connection is established
+          if (isOpen && activeTab === 'my-repos') {
+            fetchUserRepos();
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to initialize GitHub connection from environment variables:', error);
+        });
+    }
+  }, [isOpen]);
 
   // Fetch user's repositories when dialog opens
   useEffect(() => {
@@ -291,26 +349,85 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
 
   const verifyRepository = async (repoUrl: string): Promise<RepositoryStats | null> => {
     try {
-      const [owner, repo] = repoUrl
+      // Extract branch from URL if present (format: url#branch)
+      let branch: string | null = null;
+      let cleanUrl = repoUrl;
+
+      if (repoUrl.includes('#')) {
+        const parts = repoUrl.split('#');
+        cleanUrl = parts[0];
+        branch = parts[1];
+      }
+
+      const [owner, repo] = cleanUrl
         .replace(/\.git$/, '')
         .split('/')
         .slice(-2);
 
+      // Try to get token from local storage first
       const connection = getLocalStorage('github_connection');
-      const headers: HeadersInit = connection?.token
-        ? {
-            Accept: 'application/vnd.github.v3+json',
-            Authorization: `Bearer ${connection.token}`,
-          }
-        : {};
 
-      // Fetch repository tree
-      const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
+      // If no connection in local storage, check environment variables
+      let headers: HeadersInit = {};
+
+      if (connection?.token) {
+        headers = {
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `Bearer ${connection.token}`,
+        };
+      } else if (import.meta.env.VITE_GITHUB_ACCESS_TOKEN) {
+        // Use token from environment variables
+        headers = {
+          Accept: 'application/vnd.github.v3+json',
+          Authorization: `Bearer ${import.meta.env.VITE_GITHUB_ACCESS_TOKEN}`,
+        };
+      }
+
+      // First, get the repository info to determine the default branch
+      const repoInfoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers,
       });
 
+      if (!repoInfoResponse.ok) {
+        throw new Error('Failed to fetch repository information');
+      }
+
+      const repoInfo = (await repoInfoResponse.json()) as { default_branch: string };
+      let defaultBranch = repoInfo.default_branch || 'main';
+
+      // If a branch was specified in the URL, use that instead of the default
+      if (branch) {
+        defaultBranch = branch;
+      }
+
+      // Try to fetch the repository tree using the selected branch
+      let treeResponse = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`,
+        {
+          headers,
+        },
+      );
+
+      // If the selected branch doesn't work, try common branch names
       if (!treeResponse.ok) {
-        throw new Error('Failed to fetch repository structure');
+        // Try 'master' branch if default branch failed
+        treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`, {
+          headers,
+        });
+
+        // If master also fails, try 'main' branch
+        if (!treeResponse.ok) {
+          treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`, {
+            headers,
+          });
+        }
+
+        // If all common branches fail, throw an error
+        if (!treeResponse.ok) {
+          throw new Error(
+            'Failed to fetch repository structure. Please check the repository URL and your access permissions.',
+          );
+        }
       }
 
       const treeData = (await treeResponse.json()) as GitHubTreeResponse;
