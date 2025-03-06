@@ -6,6 +6,65 @@ import http from 'isomorphic-git/http/web';
 import Cookies from 'js-cookie';
 import { toast } from 'react-toastify';
 
+// Set the custom path implementation before any git operations
+const customPath = {
+  join: (...parts: string[]): string => parts.join('/').replace(/\/+/g, '/'),
+  dirname: (path: string): string => {
+    if (!path || !path.includes('/')) {
+      return '.';
+    }
+
+    path = path.replace(/\/+$/, '');
+
+    return path.split('/').slice(0, -1).join('/') || '/';
+  },
+  basename: (path: string, ext?: string): string => {
+    path = path.replace(/\/+$/, '');
+
+    const base = path.split('/').pop() || '';
+
+    if (ext && base.endsWith(ext)) {
+      return base.slice(0, -ext.length);
+    }
+
+    return base;
+  },
+  relative: (from: string, to: string): string => {
+    from = from.replace(/\/+$/, '');
+    to = to.replace(/\/+$/, '');
+
+    if (from === to) {
+      return '';
+    }
+
+    if (to.startsWith(from + '/')) {
+      return to.slice(from.length + 1);
+    }
+
+    return to;
+  },
+};
+
+// Set the custom path implementation globally for isomorphic-git
+(git as any).cores?.create('default').set('fs', customPath);
+
+// Create a wrapper around git.clone that uses our custom path module
+const gitCloneWithCustomPath = async (options: Parameters<typeof git.clone>[0]): Promise<void> => {
+  // Store the original path module
+  const originalPath = (git as any)._path;
+
+  try {
+    // Replace the path module with our custom one
+    (git as any)._path = customPath;
+
+    // Call the original clone function
+    return await git.clone(options);
+  } finally {
+    // Restore the original path module
+    (git as any)._path = originalPath;
+  }
+};
+
 const lookupSavedPassword = (url: string) => {
   const domain = url.split('/')[2];
   const gitCreds = Cookies.get(`git:${domain}`);
@@ -63,7 +122,7 @@ export function useGit() {
       }
 
       try {
-        await git.clone({
+        await gitCloneWithCustomPath({
           fs,
           http,
           dir: webcontainer.workdir,
@@ -73,7 +132,7 @@ export function useGit() {
           corsProxy: '/api/git-proxy',
           headers,
 
-          onAuth: (url) => {
+          onAuth: (url: string) => {
             let auth = lookupSavedPassword(url);
 
             if (auth) {
@@ -90,11 +149,11 @@ export function useGit() {
               return { cancel: true };
             }
           },
-          onAuthFailure: (url, _auth) => {
+          onAuthFailure: (url: string, _auth: GitAuth) => {
             toast.error(`Error Authenticating with ${url.split('/')[2]}`);
             throw `Error Authenticating with ${url.split('/')[2]}`;
           },
-          onAuthSuccess: (url, auth) => {
+          onAuthSuccess: (url: string, auth: GitAuth) => {
             saveGitAuth(url, auth);
           },
         });
@@ -262,67 +321,7 @@ const getFs = (
 });
 
 const pathUtils = {
-  dirname: (path: string) => {
-    // Handle empty or just filename cases
-    if (!path || !path.includes('/')) {
-      return '.';
-    }
-
-    // Remove trailing slashes
-    path = path.replace(/\/+$/, '');
-
-    // Get directory part
-    return path.split('/').slice(0, -1).join('/') || '/';
-  },
-
-  basename: (path: string, ext?: string) => {
-    // Remove trailing slashes
-    path = path.replace(/\/+$/, '');
-
-    // Get the last part of the path
-    const base = path.split('/').pop() || '';
-
-    // If extension is provided, remove it from the result
-    if (ext && base.endsWith(ext)) {
-      return base.slice(0, -ext.length);
-    }
-
-    return base;
-  },
-  relative: (from: string, to: string): string => {
-    // Handle empty inputs
-    if (!from || !to) {
-      return '.';
-    }
-
-    // Normalize paths by removing trailing slashes and splitting
-    const normalizePathParts = (p: string) => p.replace(/\/+$/, '').split('/').filter(Boolean);
-
-    const fromParts = normalizePathParts(from);
-    const toParts = normalizePathParts(to);
-
-    // Find common parts at the start of both paths
-    let commonLength = 0;
-    const minLength = Math.min(fromParts.length, toParts.length);
-
-    for (let i = 0; i < minLength; i++) {
-      if (fromParts[i] !== toParts[i]) {
-        break;
-      }
-
-      commonLength++;
-    }
-
-    // Calculate the number of "../" needed
-    const upCount = fromParts.length - commonLength;
-
-    // Get the remaining path parts we need to append
-    const remainingPath = toParts.slice(commonLength);
-
-    // Construct the relative path
-    const relativeParts = [...Array(upCount).fill('..'), ...remainingPath];
-
-    // Handle empty result case
-    return relativeParts.length === 0 ? '.' : relativeParts.join('/');
-  },
+  dirname: (path: string) => customPath.dirname(path),
+  basename: (path: string, ext?: string) => customPath.basename(path, ext),
+  relative: (from: string, to: string) => customPath.relative(from, to),
 };

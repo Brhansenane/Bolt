@@ -1,5 +1,12 @@
+/**
+ * @server-only
+ */
+
+// Use non-relative imports for Node.js modules to ensure they're only used on the server
 import { json } from '@remix-run/node';
 import type { ActionFunction } from '@remix-run/node';
+
+// Instead of dynamic imports, we can directly import since this file is server-only
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -27,6 +34,42 @@ interface UpdateProgress {
     changelog?: string;
     compareUrl?: string;
   };
+}
+
+/**
+ * Fetches the changelog between two git commits
+ * @param currentCommit The current commit hash
+ * @param remoteCommit The remote commit hash to compare with
+ * @returns A formatted changelog string
+ */
+async function fetchChangelog(currentCommit: string, remoteCommit: string): Promise<string> {
+  try {
+    // Get commit messages between current and remote
+    const { stdout: logOutput } = await execAsync(
+      `git log --pretty=format:"%h|%s|%an|%aI" ${currentCommit}..${remoteCommit}`,
+    );
+
+    if (!logOutput.trim()) {
+      return 'No detailed changelog available.';
+    }
+
+    // Parse and format the commits
+    const commits = logOutput
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [hash, subject, author, date] = line.split('|');
+        const formattedDate = new Date(date).toLocaleDateString();
+
+        return `- **${hash}** ${subject} (by ${author} on ${formattedDate})`;
+      })
+      .join('\n');
+
+    return `## Changes between ${currentCommit.substring(0, 7)} and ${remoteCommit.substring(0, 7)}\n\n${commits}`;
+  } catch (error) {
+    console.error('Error generating changelog:', error);
+    return 'Failed to generate changelog. Please check the GitHub repository for details.';
+  }
 }
 
 export const action: ActionFunction = async ({ request }) => {
@@ -487,87 +530,3 @@ export const action: ActionFunction = async ({ request }) => {
     );
   }
 };
-
-// Add this function to fetch the changelog
-async function fetchChangelog(currentCommit: string, remoteCommit: string): Promise<string> {
-  try {
-    // First try to get the changelog.md content
-    const { stdout: changelogContent } = await execAsync('git show upstream/main:changelog.md');
-
-    // If we have a changelog, return it
-    if (changelogContent) {
-      return changelogContent;
-    }
-
-    // If no changelog.md, generate one in a similar format
-    let changelog = '# Changes in this Update\n\n';
-
-    // Get commit messages grouped by type
-    const { stdout: commitLog } = await execAsync(
-      `git log --pretty=format:"%h|%s|%b" ${currentCommit.trim()}..${remoteCommit.trim()}`,
-    );
-
-    const commits = commitLog.split('\n').filter(Boolean);
-    const categorizedCommits: Record<string, string[]> = {
-      '✨ Features': [],
-      '🐛 Bug Fixes': [],
-      '📚 Documentation': [],
-      '💎 Styles': [],
-      '♻️ Code Refactoring': [],
-      '⚡ Performance': [],
-      '🧪 Tests': [],
-      '🛠️ Build': [],
-      '⚙️ CI': [],
-      '🔍 Other Changes': [],
-    };
-
-    // Categorize commits
-    for (const commit of commits) {
-      const [hash, subject] = commit.split('|');
-      let category = '🔍 Other Changes';
-
-      if (subject.startsWith('feat:') || subject.startsWith('feature:')) {
-        category = '✨ Features';
-      } else if (subject.startsWith('fix:')) {
-        category = '🐛 Bug Fixes';
-      } else if (subject.startsWith('docs:')) {
-        category = '📚 Documentation';
-      } else if (subject.startsWith('style:')) {
-        category = '💎 Styles';
-      } else if (subject.startsWith('refactor:')) {
-        category = '♻️ Code Refactoring';
-      } else if (subject.startsWith('perf:')) {
-        category = '⚡ Performance';
-      } else if (subject.startsWith('test:')) {
-        category = '🧪 Tests';
-      } else if (subject.startsWith('build:')) {
-        category = '🛠️ Build';
-      } else if (subject.startsWith('ci:')) {
-        category = '⚙️ CI';
-      }
-
-      const message = subject.includes(':') ? subject.split(':')[1].trim() : subject.trim();
-      categorizedCommits[category].push(`* ${message} (${hash.substring(0, 7)})`);
-    }
-
-    // Build changelog content
-    for (const [category, commits] of Object.entries(categorizedCommits)) {
-      if (commits.length > 0) {
-        changelog += `\n## ${category}\n\n${commits.join('\n')}\n`;
-      }
-    }
-
-    // Add stats
-    const { stdout: stats } = await execAsync(`git diff --shortstat ${currentCommit.trim()}..${remoteCommit.trim()}`);
-
-    if (stats) {
-      changelog += '\n## 📊 Stats\n\n';
-      changelog += `${stats.trim()}\n`;
-    }
-
-    return changelog;
-  } catch (error) {
-    console.error('Error fetching changelog:', error);
-    return 'Unable to fetch changelog';
-  }
-}

@@ -26,6 +26,7 @@ const TAB_ICONS: Record<TabType, string> = {
   update: 'i-ph:arrow-clockwise-fill',
   'task-manager': 'i-ph:chart-line-fill',
   'tab-management': 'i-ph:squares-four-fill',
+  'pr-testing': 'i-lucide:git-pull-request',
 };
 
 // Define which tabs are default in user mode
@@ -46,7 +47,7 @@ const OPTIONAL_USER_TABS: TabType[] = ['profile', 'settings', 'task-manager', 's
 const ALL_USER_TABS = [...DEFAULT_USER_TABS, ...OPTIONAL_USER_TABS];
 
 // Define which tabs are beta
-const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers']);
+const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers', 'pr-testing']);
 
 // Beta label component
 const BetaLabel = () => (

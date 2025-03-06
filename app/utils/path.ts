@@ -1,10 +1,12 @@
 // Browser-compatible path utilities
 import type { ParsedPath } from 'path';
-import pathBrowserify from 'path-browserify';
+
+// Import our custom implementation of path-browserify
+import pathBrowserify from '~/utils/path-browserify-shim';
 
 /**
  * A browser-compatible path utility that mimics Node's path module
- * Using path-browserify for consistent behavior in browser environments
+ * Using our custom implementation for consistent behavior in browser environments
  */
 export const path = {
   join: (...paths: string[]): string => pathBrowserify.join(...paths),

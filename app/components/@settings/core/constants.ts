@@ -15,6 +15,7 @@ export const TAB_ICONS: Record<TabType, string> = {
   update: 'i-ph:arrow-clockwise-fill',
   'task-manager': 'i-ph:chart-line-fill',
   'tab-management': 'i-ph:squares-four-fill',
+  'pr-testing': 'i-lucide:git-pull-request',
 };
 
 export const TAB_LABELS: Record<TabType, string> = {
@@ -32,6 +33,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   update: 'Updates',
   'task-manager': 'Task Manager',
   'tab-management': 'Tab Management',
+  'pr-testing': 'PR Testing',
 };
 
 export const TAB_DESCRIPTIONS: Record<TabType, string> = {
@@ -49,6 +51,7 @@ export const TAB_DESCRIPTIONS: Record<TabType, string> = {
   update: 'Check for updates and release notes',
   'task-manager': 'Monitor system resources and processes',
   'tab-management': 'Configure visible tabs and their order',
+  'pr-testing': 'Test pull requests from GitHub repository',
 };
 
 export const DEFAULT_TAB_CONFIG = [
@@ -85,4 +88,5 @@ export const DEFAULT_TAB_CONFIG = [
   { id: 'service-status', visible: true, window: 'developer' as const, order: 10 },
   { id: 'debug', visible: true, window: 'developer' as const, order: 11 },
   { id: 'update', visible: true, window: 'developer' as const, order: 12 },
+  { id: 'pr-testing', visible: true, window: 'developer' as const, order: 13 },
 ];

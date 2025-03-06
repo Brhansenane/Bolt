@@ -68,6 +68,44 @@ const getPackageJson = () => {
   }
 };
 
+// Create a custom path-browserify plugin
+function pathBrowserifyPlugin() {
+  const virtualModuleId = 'path-browserify';
+  const resolvedVirtualModuleId = '\0' + virtualModuleId;
+
+  return {
+    name: 'vite-plugin-path-browserify',
+    resolveId(id: string): string | undefined {
+      if (id === 'path-browserify' || id === virtualModuleId) {
+        return resolvedVirtualModuleId;
+      }
+
+      return undefined;
+    },
+    load(id: string): string | undefined {
+      if (id === resolvedVirtualModuleId) {
+        return `
+          import * as pathBrowserify from '~/utils/path-browserify-shim';
+          export const join = pathBrowserify.join;
+          export const dirname = pathBrowserify.dirname;
+          export const basename = pathBrowserify.basename;
+          export const relative = pathBrowserify.relative;
+          export const resolve = pathBrowserify.resolve;
+          export const normalize = pathBrowserify.normalize;
+          export const isAbsolute = pathBrowserify.isAbsolute;
+          export const sep = pathBrowserify.sep;
+          export const delimiter = pathBrowserify.delimiter;
+          export const parse = pathBrowserify.parse;
+          export const format = pathBrowserify.format;
+          export default pathBrowserify;
+        `;
+      }
+
+      return undefined;
+    },
+  };
+}
+
 const pkg = getPackageJson();
 const gitInfo = getGitInfo();
 
@@ -93,9 +131,34 @@ export default defineConfig((config) => {
     build: {
       target: 'esnext',
     },
+    optimizeDeps: {
+      include: ['path-browserify'], // Add this
+      exclude: ['child_process', 'fs', 'os', 'util', 'buffer', 'process'],
+    },
+    resolve: {
+      alias: {
+        // Use our custom implementation of path-browserify with a relative path
+        'path-browserify': './app/utils/path-browserify-shim.ts',
+      },
+    },
+    ssr: {
+      noExternal: ['child_process', 'fs', 'os', 'util', 'path', 'buffer', 'process'],
+    },
+    server: {
+      // This tells Vite to use Node.js modules from the server
+      origin: 'http://localhost:5173',
+    },
     plugins: [
+      pathBrowserifyPlugin(),
       nodePolyfills({
-        include: ['path', 'buffer', 'process'],
+        // Only include these polyfills for client-side code
+        include: ['buffer', 'process'],
+
+        // Explicitly exclude Node.js modules that should only be used on the server
+        exclude: ['path', 'fs', 'os', 'child_process', 'util'],
+        globals: {
+          process: true,
+        },
       }),
       config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({

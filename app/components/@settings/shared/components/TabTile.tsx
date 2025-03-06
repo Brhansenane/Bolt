@@ -3,6 +3,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { classNames } from '~/utils/classNames';
 import type { TabVisibilityConfig } from '~/components/@settings/core/types';
 import { TAB_LABELS, TAB_ICONS } from '~/components/@settings/core/constants';
+import { FiGitPullRequest } from 'react-icons/fi';
 
 interface TabTileProps {
   tab: TabVisibilityConfig;
@@ -27,6 +28,34 @@ export const TabTile: React.FC<TabTileProps> = ({
   className,
   children,
 }: TabTileProps) => {
+  // Custom rendering for PR Testing tab icon
+  const renderTabIcon = () => {
+    if (tab.id === 'pr-testing') {
+      return (
+        <FiGitPullRequest
+          className={classNames(
+            'w-8 h-8',
+            'text-gray-600 dark:text-gray-300',
+            'group-hover:text-purple-500 dark:group-hover:text-purple-400/80',
+            isActive ? 'text-purple-500 dark:text-purple-400/90' : '',
+          )}
+        />
+      );
+    }
+
+    return (
+      <motion.div
+        className={classNames(
+          TAB_ICONS[tab.id],
+          'w-8 h-8',
+          'text-gray-600 dark:text-gray-300',
+          'group-hover:text-purple-500 dark:group-hover:text-purple-400/80',
+          isActive ? 'text-purple-500 dark:text-purple-400/90' : '',
+        )}
+      />
+    );
+  };
+
   return (
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
@@ -62,15 +91,7 @@ export const TabTile: React.FC<TabTileProps> = ({
                   isActive ? 'bg-purple-500/10 dark:bg-purple-500/10 ring-purple-500/30 dark:ring-purple-500/20' : '',
                 )}
               >
-                <motion.div
-                  className={classNames(
-                    TAB_ICONS[tab.id],
-                    'w-8 h-8',
-                    'text-gray-600 dark:text-gray-300',
-                    'group-hover:text-purple-500 dark:group-hover:text-purple-400/80',
-                    isActive ? 'text-purple-500 dark:text-purple-400/90' : '',
-                  )}
-                />
+                {renderTabIcon()}
               </motion.div>
 
               {/* Label and Description */}
@@ -78,57 +99,46 @@ export const TabTile: React.FC<TabTileProps> = ({
                 <h3
                   className={classNames(
                     'text-[15px] font-medium leading-snug mb-2',
-                    'text-gray-700 dark:text-gray-200',
-                    'group-hover:text-purple-600 dark:group-hover:text-purple-300/90',
-                    isActive ? 'text-purple-500 dark:text-purple-400/90' : '',
+                    'text-center',
+                    'text-[#111111] dark:text-white',
+                    'group-hover:text-purple-700 dark:group-hover:text-purple-300',
+                    isActive ? 'text-purple-700 dark:text-purple-300' : '',
                   )}
                 >
                   {TAB_LABELS[tab.id]}
                 </h3>
                 {description && (
-                  <p
-                    className={classNames(
-                      'text-[13px] leading-relaxed',
-                      'text-gray-500 dark:text-gray-400',
-                      'max-w-[85%]',
-                      'text-center',
-                      'group-hover:text-purple-500 dark:group-hover:text-purple-400/70',
-                      isActive ? 'text-purple-400 dark:text-purple-400/80' : '',
-                    )}
-                  >
-                    {description}
-                  </p>
+                  <p className="text-xs text-center text-[#666666] dark:text-[#999999] max-w-[200px]">{description}</p>
                 )}
               </div>
             </div>
 
-            {/* Update Indicator with Tooltip */}
-            {hasUpdate && (
-              <>
-                <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 animate-pulse" />
-                <Tooltip.Portal>
-                  <Tooltip.Content
-                    className={classNames(
-                      'px-3 py-1.5 rounded-lg',
-                      'bg-[#18181B] text-white',
-                      'text-sm font-medium',
-                      'select-none',
-                      'z-[100]',
-                    )}
-                    side="top"
-                    sideOffset={5}
-                  >
-                    {statusMessage}
-                    <Tooltip.Arrow className="fill-[#18181B]" />
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              </>
+            {/* Status Message */}
+            {statusMessage && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                <div className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+                  {statusMessage}
+                </div>
+              </div>
             )}
 
-            {/* Children (e.g. Beta Label) */}
+            {/* Update Badge */}
+            {hasUpdate && <div className="absolute top-2 right-2 w-3 h-3 bg-purple-500 rounded-full animate-pulse" />}
+
+            {/* Children */}
             {children}
           </motion.div>
         </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            side="bottom"
+            align="center"
+            className="bg-[#333333] dark:bg-[#111111] text-white px-3 py-1.5 rounded-md text-xs z-50"
+          >
+            {TAB_LABELS[tab.id]}
+            <Tooltip.Arrow className="fill-[#333333] dark:fill-[#111111]" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
       </Tooltip.Root>
     </Tooltip.Provider>
   );
