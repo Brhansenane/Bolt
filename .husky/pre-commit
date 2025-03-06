@@ -23,7 +23,7 @@ fi
 
 # Run lint
 echo "Running lint..."
-if ! pnpm lint; then
+if ! pnpm pre-commit; then
     echo "❌ Linting failed! Run 'pnpm lint:fix' to fix the easy issues."
     echo "Once you're done, don't forget to add your beautification to the commit! 🤩"
     exit 1

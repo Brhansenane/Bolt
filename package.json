@@ -25,7 +25,9 @@
     "typegen": "wrangler types",
     "preview": "pnpm run build && pnpm run start",
     "prepare": "husky",
-    "clean": "node scripts/clean.js"
+    "clean": "node scripts/clean.js",
+    "format": "prettier --write \"**/*.(js|mjs|cjs|jsx|ts|json|json5|jsonc|yml|yaml|md|markdown|graphql|gql|ng|sql|prisma)\"",
+    "pre-commit": "lint-staged"
   },
   "engines": {
     "node": ">=18.18.0"
@@ -136,6 +138,7 @@
     "@remix-run/dev": "^2.15.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/diff": "^5.2.3",
     "@types/dom-speech-recognition": "^0.0.4",
     "@types/file-saver": "^2.0.7",
@@ -148,6 +151,7 @@
     "husky": "9.1.7",
     "is-ci": "^3.0.1",
     "jsdom": "^26.0.0",
+    "lint-staged": "^15.4.3",
     "node-fetch": "^3.3.2",
     "pnpm": "^9.14.4",
     "prettier": "^3.4.1",
@@ -166,5 +170,14 @@
   "resolutions": {
     "@typescript-eslint/utils": "^8.0.0-alpha.30"
   },
-  "packageManager": "pnpm@9.4.0"
+  "packageManager": "pnpm@9.4.0",
+  "lint-staged": {
+    "**/*.{js,mjs,cjs,jsx,ts,tsx,vue}": [
+      "prettier --write",
+      "eslint --cache --cache-location ./node_modules/.cache/eslint --fix"
+    ],
+    "**/*.{css,scss,sass,html,json,json5,jsonc,yml,yaml,md,markdown,graphql,gql,ng,sql,prisma}": [
+      "prettier --write"
+    ]
+  }
 }

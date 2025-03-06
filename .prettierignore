@@ -1,2 +1,8 @@
 pnpm-lock.yaml
 .astro
+build/
+node_modules/
+dist
+.wrangler
+bolt/build
+.history
