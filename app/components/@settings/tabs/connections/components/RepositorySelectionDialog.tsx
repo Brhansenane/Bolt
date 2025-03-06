@@ -192,31 +192,6 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     return null;
   }
 
-  // Function to open settings panel with connections tab
-  const openSettingsPanel = () => {
-    // Close the current dialog first
-    onClose();
-
-    // Find the settings button and click it to open the settings panel
-    const settingsButton = document.querySelector('[data-testid="settings-button"]');
-
-    if (settingsButton instanceof HTMLElement) {
-      settingsButton.click();
-
-      // After a short delay, try to find and click the connections tab
-      setTimeout(() => {
-        const connectionsTab = document.querySelector('[data-tab-id="connections"]');
-
-        if (connectionsTab instanceof HTMLElement) {
-          connectionsTab.click();
-        }
-      }, 100);
-    } else {
-      // Fallback if we can't find the settings button
-      toast.info('Please open Settings and go to the Connections tab');
-    }
-  };
-
   // Create a portal directly to the document body to ensure highest z-index
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center">
@@ -227,12 +202,13 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
         <div className="space-y-4">
           <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark">
-            To access private repositories, you need proper GitHub authentication. Here are your options:
+            To access private repositories, you need to connect your GitHub account by providing a personal access
+            token.
           </p>
 
           <div className="bg-[#F5F5F5] dark:bg-[#252525] p-4 rounded-lg border border-[#E5E5E5] dark:border-[#333333]">
             <h3 className="font-medium text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark mb-2">
-              Option 1: Connect with GitHub Token
+              Connect with GitHub Token
             </h3>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -306,38 +282,20 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             </form>
           </div>
 
-          <div className="bg-[#F5F5F5] dark:bg-[#252525] p-4 rounded-lg border border-[#E5E5E5] dark:border-[#333333]">
-            <h3 className="font-medium text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark mb-2">
-              Option 2: Connect in Settings
-            </h3>
-            <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary-dark mb-3">
-              Go to Settings &gt; Connections to connect your GitHub account. This works for your own private
-              repositories.
-            </p>
-            <button
-              onClick={openSettingsPanel}
-              className="w-full py-2 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-bolt-elements-textPrimary dark:text-bolt-elements-textPrimary-dark rounded-lg transition-colors"
-            >
-              Open Settings Panel
-            </button>
-          </div>
-
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-4 rounded-lg">
             <h3 className="font-medium text-amber-800 dark:text-amber-300 mb-2 flex items-center">
               <span className="i-ph:warning-circle mr-2"></span>
-              Accessing Others' Private Repositories
+              Accessing Private Repositories
             </h3>
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              To access a private repository owned by another user or organization:
+              Important things to know about accessing private repositories:
             </p>
             <ul className="list-disc pl-5 mt-2 text-sm text-amber-700 dark:text-amber-400 space-y-1">
-              <li>You must be granted access to that repository by its owner</li>
+              <li>You must be granted access to the repository by its owner</li>
               <li>Your GitHub token must have the 'repo' scope</li>
               <li>For organization repositories, you may need additional permissions</li>
+              <li>No token can give you access to repositories you don't have permission for</li>
             </ul>
-            <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
-              If you don't have access, contact the repository owner to either make it public or grant you access.
-            </p>
           </div>
         </div>
 
