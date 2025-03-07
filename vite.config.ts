@@ -93,6 +93,12 @@ export default defineConfig((config) => {
     build: {
       target: 'esnext',
     },
+    server: {
+      allowedHosts: [
+        'bolt-diy-5q4b.onrender.com', // أضف هذا المضيف
+        'localhost', // يمكنك إضافة مضيفين آخرين إذا لزم الأمر
+      ],
+    },
     plugins: [
       nodePolyfills({
         include: ['path', 'buffer', 'process'],
